@@ -1,0 +1,235 @@
+# First verison of a simple linear regression algorithm in MAMBA, the
+# MPC language of the SCALE-MAMBA library
+# The algorithm is an adapted verison of the one to be found here:
+# https://machinelearningmastery.com/implement-simple-linear-regression-scratch-python/
+
+# Author: Florian Apfelbeck, July, 2018
+
+# TODO:
+# - Enable external input of sint arrays
+# - ensure participation of player 2 (i.e., the third participant)
+# - implement ability to split arrays
+# - Ensure correct function of code and testing
+# - improve multiple additions to same value, e.g., in sum function
+# (do not use arrays but MemValue)
+# - commment code
+# - create README elaborating how to run this with documentation of changes in
+# SCALE-MAMBA source code (files IO.h, Player.cpp and new Input_OUtput_* files)
+# - consider creating vector style array (with pointer to end)
+# - consider implementing possibility for external input of sfloats into the
+# SCALE-MAMBA library
+
+from Compiler import mpc_math
+
+sfloat.vlen = 15 # Length of mantissa in bits
+sfloat.plen = 10 # Length of exponent in bits
+sfloat.kappa = 4 # Statistical security parameter for floats
+
+# data input quick fix
+x_tr = sfloat.Array(38)
+x_te = sfloat.Array(25)
+y_tr = sfloat.Array(38)
+y_te = sfloat.Array(25)
+
+x_tr[0] = sfloat(108)
+y_tr[0] = sfloat(392.5)
+x_tr[1] = sfloat(19)
+y_tr[1] = sfloat(46.2)
+x_tr[2] = sfloat(13)
+y_tr[2] = sfloat(15.7)
+x_tr[3] = sfloat(124)
+y_tr[3] = sfloat(422.2)
+x_tr[4] = sfloat(40)
+y_tr[4] = sfloat(119.4)
+x_tr[5] = sfloat(57)
+y_tr[5] = sfloat(170.9)
+x_tr[6] = sfloat(23)
+y_tr[6] = sfloat(56.9)
+x_tr[7] = sfloat(14)
+y_tr[7] = sfloat(77.5)
+x_tr[8] = sfloat(45)
+y_tr[8] = sfloat(214)
+x_tr[9] = sfloat(10)
+y_tr[9] = sfloat(65.3)
+x_tr[10] = sfloat(5)
+y_tr[10] = sfloat(20.9)
+x_tr[11] = sfloat(48)
+y_tr[11] = sfloat(248.1)
+x_tr[12] = sfloat(11)
+y_tr[12] = sfloat(23.5)
+x_tr[13] = sfloat(23)
+y_tr[13] = sfloat(39.6)
+x_tr[14] = sfloat(7)
+y_tr[14] = sfloat(48.8)
+x_tr[15] = sfloat(2)
+y_tr[15] = sfloat(6.6)
+x_tr[16] = sfloat(24)
+y_tr[16] = sfloat(134.9)
+x_tr[17] = sfloat(6)
+y_tr[17] = sfloat(50.9)
+x_tr[18] = sfloat(3)
+y_tr[18] = sfloat(4.4)
+x_tr[19] = sfloat(23)
+y_tr[19] = sfloat(113)
+x_tr[20] = sfloat(6)
+y_tr[20] = sfloat(14.8)
+x_tr[21] = sfloat(9)
+y_tr[21] = sfloat(48.7)
+x_tr[22] = sfloat(9)
+y_tr[22] = sfloat(52.1)
+x_tr[23] = sfloat(3)
+y_tr[23] = sfloat(13.2)
+x_tr[24] = sfloat(29)
+y_tr[24] = sfloat(103.9)
+x_tr[25] = sfloat(7)
+y_tr[25] = sfloat(77.5)
+x_tr[26] = sfloat(4)
+y_tr[26] = sfloat(11.8)
+x_tr[27] = sfloat(20)
+y_tr[27] = sfloat(98.1)
+x_tr[28] = sfloat(7)
+y_tr[28] = sfloat(27.9)
+x_tr[29] = sfloat(4)
+y_tr[29] = sfloat(38.1)
+x_tr[30] = sfloat(0)
+y_tr[30] = sfloat(0)
+x_tr[31] = sfloat(25)
+y_tr[31] = sfloat(69.2)
+x_tr[32] = sfloat(6)
+y_tr[32] = sfloat(14.6)
+x_tr[33] = sfloat(5)
+y_tr[33] = sfloat(40.3)
+x_tr[34] = sfloat(22)
+y_tr[34] = sfloat(161.5)
+x_tr[35] = sfloat(11)
+y_tr[35] = sfloat(57.2)
+x_tr[36] = sfloat(61)
+y_tr[36] = sfloat(217.6)
+x_tr[37] = sfloat(12)
+y_tr[37] = sfloat(58.1)
+x_te[0] = sfloat(4)
+y_te[0] = sfloat(12.6)
+x_te[1] = sfloat(16)
+y_te[1] = sfloat(59.6)
+x_te[2] = sfloat(13)
+y_te[2] = sfloat(89.9)
+x_te[3] = sfloat(60)
+y_te[3] = sfloat(202.4)
+x_te[4] = sfloat(41)
+y_te[4] = sfloat(181.3)
+x_te[5] = sfloat(37)
+y_te[5] = sfloat(152.8)
+x_te[6] = sfloat(55)
+y_te[6] = sfloat(162.8)
+x_te[7] = sfloat(41)
+y_te[7] = sfloat(73.4)
+x_te[8] = sfloat(11)
+y_te[8] = sfloat(21.3)
+x_te[9] = sfloat(27)
+y_te[9] = sfloat(92.6)
+x_te[10] = sfloat(8)
+y_te[10] = sfloat(76.1)
+x_te[11] = sfloat(3)
+y_te[11] = sfloat(39.9)
+x_te[12] = sfloat(17)
+y_te[12] = sfloat(142.1)
+x_te[13] = sfloat(13)
+y_te[13] = sfloat(93)
+x_te[14] = sfloat(13)
+y_te[14] = sfloat(31.9)
+x_te[15] = sfloat(15)
+y_te[15] = sfloat(32.1)
+x_te[16] = sfloat(8)
+y_te[16] = sfloat(55.6)
+x_te[17] = sfloat(29)
+y_te[17] = sfloat(133.3)
+x_te[18] = sfloat(30)
+y_te[18] = sfloat(194.5)
+x_te[19] = sfloat(24)
+y_te[19] = sfloat(137.9)
+x_te[20] = sfloat(9)
+y_te[20] = sfloat(87.4)
+x_te[21] = sfloat(31)
+y_te[21] = sfloat(209.8)
+x_te[22] = sfloat(14)
+y_te[22] = sfloat(95.5)
+x_te[23] = sfloat(53)
+y_te[23] = sfloat(244.6)
+x_te[24] = sfloat(26)
+y_te[24] = sfloat(187.5)
+
+# sum function
+def sum(array):
+    result_array = sfloat.Array(1)
+    result_array[0] = 0.0
+    @while_do(lambda a: a < len(array), 0)
+    def _(i):
+        result_array[0] = result_array[0] + array[i]
+        return i+1
+    return result_array[0]
+
+# mean function
+def mean(array):
+    return sum(array) / sfloat(len(array))
+
+# rmse_metric
+def rmse_metric(actual, predicted):
+    sum_err = sfloat.Array(1)
+    sum_err[0] = 0.0
+    rmse = sfloat(0.0)
+
+    @for_range(len(actual))
+    def _(i):
+        prediction_err = predicted[i] - actual[i]
+        sum_err[0] += (prediction_err ** 2)
+    mean_err = sum_err[0] / sfloat(len(actual))
+    rmse = mpc_math.sqrt_simplified_fx(sfix(mean_err))
+    return rmse
+
+# covariance
+def covariance(x_array, x_mean, y_array, y_mean):
+    covar = sfloat.Array(1)
+    covar[0] = 0.0
+    @for_range(len(x_array))
+    def _(i):
+        covar[0] = covar[0] + (x_array[i] - x_mean) * (y_array[i] - y_mean)
+    return covar[0]
+
+# variance
+def variance(array, mean):
+    var = sfloat.Array(1)
+    var[0] = 0.0
+    # TODO try this with a address allocation (documentaion page 41)
+    @for_range(len(array))
+    def _(i):
+        var[0] = var[0] + (array[i] - mean) ** 2
+    return var[0]
+
+# coefficients
+def coefficients(x_array, y_array):
+    x_mean = mean(x_array)
+    y_mean = mean(y_array)
+    b1 = covariance(x_array, x_mean, y_array, y_mean) / variance(x_array, x_mean)
+    b0 = y_mean - b1 * x_mean
+    return b0, b1
+
+# slr algorithm
+def simple_linear_regression(x_train, x_test, y_train):
+    predictions = sfloat.Array(len(x_test))
+    b0, b1 = coefficients(x_train, y_train)
+    @for_range(len(x_test))
+    def _(i):
+        predictions[i] = b0 + b1 * x_test[i]
+    return predictions
+
+# evaluate
+def evaluate(x_train, x_test, y_train, y_test):
+    predicted = simple_linear_regression(x_train, x_test, y_train)
+    rmse = rmse_metric(y_test, predicted)
+    return rmse
+
+
+rmse = evaluate(x_tr, x_te, y_tr, y_te)
+print_ln("==========================")
+print_ln("RMSE: %s", rmse.reveal())
+print_ln("==========================")
