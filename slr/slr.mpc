@@ -158,6 +158,29 @@ y_te[23] = sfloat(244.6)
 x_te[24] = sfloat(26)
 y_te[24] = sfloat(187.5)
 
+
+# loading of external private dataset
+# naive implementation (with preknown and defined input sizes)
+X_ARRAY_LENGTH = 15
+x = sint.Array(X_ARRAY_LENGTH)
+#y = sint.Array(15)
+open_channel(5)
+
+@for_range(X_ARRAY_LENGTH)
+def _(i):
+    x[i] = sint.get_private_input_from(1)
+
+
+print_ln("---------")
+print_ln("x:\n")
+@for_range(X_ARRAY_LENGTH)
+def _(i):
+    print_ln("%s", x[i].reveal())
+
+print_ln("---------")
+
+close_channel(5)
+
 # sum function
 def sum(array):
     result_array = sfloat.Array(1)
@@ -229,7 +252,7 @@ def evaluate(x_train, x_test, y_train, y_test):
     return rmse
 
 
-rmse = evaluate(x_tr, x_te, y_tr, y_te)
-print_ln("==========================")
-print_ln("RMSE: %s", rmse.reveal())
-print_ln("==========================")
+# rmse = evaluate(x_tr, x_te, y_tr, y_te)
+# print_ln("==========================")
+# print_ln("RMSE: %s", rmse.reveal())
+# print_ln("==========================")
