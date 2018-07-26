@@ -9,9 +9,11 @@
 # - Enable external input of sint arrays
 # - implement ability to split arrays
 # - commment code
+# - split in seperate files
 # - Ensure correct function of code and testing
-# - improve multiple additions to same value, e.g., in sum function
 # (do not use arrays but MemValue)
+# - improve multiple additions to same value, e.g., in sum function
+# implement multidimenitonal CustVector (to have x and y values in one vector)
 # - create README elaborating how to run this with documentation of changes in
 # SCALE-MAMBA source code (files IO.h, Player.cpp and new Input_OUtput_* files)
 # - consider implementing possibility for external input of sfloats into the
@@ -163,13 +165,13 @@ MAX_ARRAY_LENGTH = 10000
 
 
 ## Next # TODO:
-#1. Split
-# 2. Comments
-# 3. test
+# 1. Split
+# 2. round
+# 3. Comments
+# 4. test
 
 
-############ preliminary implemetation of svector. To be improved ##############
-# TODO implement NULL as end_ptr+1
+## preliminary implemetation of svector. To be improved ##
 class CustVector(object):
 
     def __init__(self):
@@ -203,115 +205,15 @@ class CustVector(object):
     def length(self):
         return self.end_ptr + 1
 
+    # show the first x elements (length) of the vector
     @method_block
-    def show(self):
-        @for_range(20)
-        #@for_range(self.end_ptr)
+    def show(self, length):
+        @for_range(length)
         def _(i):
             print_ln("%s", self.s_vector[i].reveal())
 
-###########################################################################
-######################### read in using list (not working, to be deleted) #################
-# open_channel(5)
-# # m = MemValue(cint(1))
-# input_list = [sint(3)]
-#
-# @do_while
-# def _():
-#     input = sint.get_private_input_from(1)
-#     if_then(input.reveal())
-#     print_ln("%s", input.reveal())
-#     input_list.insert(len(input_list),input)
-#     print_ln("%s", input_list[1].reveal())
-#     else_then()
-#     m.write(0)
-#     print_ln("end of input")
-#     end_if()
-#     return m > 0
 
-# a = 0
-# for i in range(MAX_ARRAY_LENGTH):
-#     input = sint.get_private_input_from(1)
-#     print_ln("%s", input.reveal())
-#
-#     if input.reveal() != 0:
-#         input_list.append(input)
-#         a = a + 1
-#         print_ln("%s", a)
-#     elif input.reveal() == 0:
-#         print_ln("end of input")
-#         break
-#
-# print_ln("======================")
-# print_ln("list 0 %s", input_list[0].reveal())
-# # print_ln("list 1 %s", input_list[1].reveal())
-# # print_ln("list 2 %s", input_list[2].reveal())
-# # print_ln("list 3 %s", input_list[3].reveal())
-# # print_ln("list 4 %s", input_list[4].reveal())
-# print_ln("======================")
-#
-# # @for_range(15)
-# # def _(i):
-# #     print_ln("----------list----")
-# #
-# #     element = input_list.pop()
-# #     print_ln(" %s", element.reveal())
-
-# close_channel(5)
-
-
-#####################################
-#
-#
-# test = sint(-10000000000000000)
-# print_ln("test========== %s", test.reveal())
-#
-
-
-################################################################################
-####################### loading of external private dataset ####################
-# naive implementation (with preknown and defined input sizes)
-# Y_ARRAY_LENGTH = 15+4
-# y = sint.Array(Y_ARRAY_LENGTH)
-# X_ARRAY_LENGTH = 15+4
-# x = sint.Array(X_ARRAY_LENGTH)
-
-# def get_external_private_array(channel, player):
-#     open_channel(channel)
-#     array = sint.Array(X_ARRAY_LENGTH)
-#
-#     condition = MemValue(cint(1))
-#     i = MemValue(cint(0))
-#
-#     @do_while
-#     def _():
-#         input = sint.get_private_input_from(player)
-#         #print_ln("input reveal %s", input.reveal())
-#
-#         if_then(input.reveal() != NULL)
-#         array[i] = input
-#         i.write(i + 1)
-#         #print_ln("input available")
-#
-#         else_then()
-#         condition.write(0)
-#         #print_ln("end of input")
-#         array[i] = NULL
-#         end_if()
-#
-#         print_ln("%s", condition)
-#         close_channel(channel)
-#         return condition > 0
-#     print_ln("---------")
-#     print_ln("x:\n")
-#     @for_range(19)
-#     def _(i):
-#         print_ln("%s", array[i].reveal())
-#     print_ln("---------")
-#
-#
-#     return array
-
+## function to read in external private array ##
 def get_external_private_array(cust_vector, channel, player):
     open_channel(channel)
     condition = MemValue(cint(1))
@@ -320,28 +222,25 @@ def get_external_private_array(cust_vector, channel, player):
     @do_while
     def _():
         input = sint.get_private_input_from(player)
-        #print_ln("input reveal %s", input.reveal())
+        print_ln("input reveal %s", input.reveal())
 
         if_then(input.reveal() != NULL)
         cust_vector.push_back(input)
         i.write(i + 1)
-        #print_ln("input available")
 
         else_then()
         condition.write(0)
-        #print_ln("end of input")
         end_if()
 
-        #print_ln("%s", condition)
         return condition > 0
 
     close_channel(channel)
 
 x = CustVector()
 
-get_external_private_array(x, 5, 1)
+get_external_private_array(x, 1005, 1)
 
-x.show()
+x.show(25)
 print_ln("=============")
 
 length = x.length()
@@ -350,7 +249,7 @@ element = x.back()
 print_ln("length: %s", length.reveal())
 print_ln("elemnt: %s", element.reveal())
 
-##########################===================
+# OLD SPLIT FUNCTION (not working)##########################===================
 # def train_test_split(x_array, y_array, split):
 #     x_test = sfloat.Array(15)
 #     y_test = sfloat.Array(15)
@@ -394,7 +293,7 @@ print_ln("elemnt: %s", element.reveal())
 #################################=====================
 
 
-###########
+# new split implementation (not ready yet) ###########
 #
 # def get_array_lengths(array, split):
 #     count = MemValue(sint(0))
@@ -510,7 +409,6 @@ print_ln("elemnt: %s", element.reveal())
 #             # x_text = rearange(x_test)
 #         return i+1
 #
-
 
 # sum function
 def sum(array):
