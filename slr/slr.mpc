@@ -7,26 +7,27 @@
 
 # TODO:
 # - Enable external input of sint arrays
-# - ensure participation of player 2 (i.e., the third participant)
 # - implement ability to split arrays
+# - commment code
 # - Ensure correct function of code and testing
 # - improve multiple additions to same value, e.g., in sum function
 # (do not use arrays but MemValue)
-# - commment code
 # - create README elaborating how to run this with documentation of changes in
 # SCALE-MAMBA source code (files IO.h, Player.cpp and new Input_OUtput_* files)
-# - consider creating vector style array (with pointer to end)
 # - consider implementing possibility for external input of sfloats into the
 # SCALE-MAMBA library
 
-from Compiler import mpc_math
+from Compiler import mpc_math, floatingpoint
 
 sfloat.vlen = 15 # Length of mantissa in bits
 sfloat.plen = 10 # Length of exponent in bits
 sfloat.kappa = 4 # Statistical security parameter for floats
 
+NULL = -123456789
+
 # data input quick fix
 x_tr = sfloat.Array(38)
+# - consider creating vector style array (with pointer to end_ptr)
 x_te = sfloat.Array(25)
 y_tr = sfloat.Array(38)
 y_te = sfloat.Array(25)
@@ -158,28 +159,358 @@ y_te[23] = sfloat(244.6)
 x_te[24] = sfloat(26)
 y_te[24] = sfloat(187.5)
 
+MAX_ARRAY_LENGTH = 10000
 
-# loading of external private dataset
+
+## Next # TODO:
+#1. Split
+# 2. Comments
+# 3. test
+
+
+############ preliminary implemetation of svector. To be improved ##############
+# TODO implement NULL as end_ptr+1
+class CustVector(object):
+
+    def __init__(self):
+        self.s_vector = sint.Array(MAX_ARRAY_LENGTH)
+        self.end_ptr = MemValue(-1)
+        self.s_vector[0] = NULL
+
+    @method_block
+    def pop_back(self):
+        element = self.s_vector[self.end_ptr]
+        self.s_vector[self.end_ptr] = NULL
+        self.end_ptr.write(self.end_ptr - 1)
+        return element
+
+    @method_block
+    def push_back(self, element):
+        self.end_ptr.write(self.end_ptr + 1)
+        self.s_vector[self.end_ptr] = element
+        self.s_vector[self.end_ptr + 1] = NULL
+
+    @method_block
+    def back(self):
+        if_then(self.end_ptr == -1)
+        result = sint(NULL)
+        else_then()
+        result = self.s_vector[self.end_ptr]
+        end_if()
+        return result
+
+    @method_block
+    def length(self):
+        return self.end_ptr + 1
+
+    @method_block
+    def show(self):
+        @for_range(20)
+        #@for_range(self.end_ptr)
+        def _(i):
+            print_ln("%s", self.s_vector[i].reveal())
+
+###########################################################################
+######################### read in using list (not working, to be deleted) #################
+# open_channel(5)
+# # m = MemValue(cint(1))
+# input_list = [sint(3)]
+#
+# @do_while
+# def _():
+#     input = sint.get_private_input_from(1)
+#     if_then(input.reveal())
+#     print_ln("%s", input.reveal())
+#     input_list.insert(len(input_list),input)
+#     print_ln("%s", input_list[1].reveal())
+#     else_then()
+#     m.write(0)
+#     print_ln("end of input")
+#     end_if()
+#     return m > 0
+
+# a = 0
+# for i in range(MAX_ARRAY_LENGTH):
+#     input = sint.get_private_input_from(1)
+#     print_ln("%s", input.reveal())
+#
+#     if input.reveal() != 0:
+#         input_list.append(input)
+#         a = a + 1
+#         print_ln("%s", a)
+#     elif input.reveal() == 0:
+#         print_ln("end of input")
+#         break
+#
+# print_ln("======================")
+# print_ln("list 0 %s", input_list[0].reveal())
+# # print_ln("list 1 %s", input_list[1].reveal())
+# # print_ln("list 2 %s", input_list[2].reveal())
+# # print_ln("list 3 %s", input_list[3].reveal())
+# # print_ln("list 4 %s", input_list[4].reveal())
+# print_ln("======================")
+#
+# # @for_range(15)
+# # def _(i):
+# #     print_ln("----------list----")
+# #
+# #     element = input_list.pop()
+# #     print_ln(" %s", element.reveal())
+
+# close_channel(5)
+
+
+#####################################
+#
+#
+# test = sint(-10000000000000000)
+# print_ln("test========== %s", test.reveal())
+#
+
+
+################################################################################
+####################### loading of external private dataset ####################
 # naive implementation (with preknown and defined input sizes)
-X_ARRAY_LENGTH = 15
-x = sint.Array(X_ARRAY_LENGTH)
-#y = sint.Array(15)
-open_channel(5)
+# Y_ARRAY_LENGTH = 15+4
+# y = sint.Array(Y_ARRAY_LENGTH)
+# X_ARRAY_LENGTH = 15+4
+# x = sint.Array(X_ARRAY_LENGTH)
 
-@for_range(X_ARRAY_LENGTH)
-def _(i):
-    x[i] = sint.get_private_input_from(1)
+# def get_external_private_array(channel, player):
+#     open_channel(channel)
+#     array = sint.Array(X_ARRAY_LENGTH)
+#
+#     condition = MemValue(cint(1))
+#     i = MemValue(cint(0))
+#
+#     @do_while
+#     def _():
+#         input = sint.get_private_input_from(player)
+#         #print_ln("input reveal %s", input.reveal())
+#
+#         if_then(input.reveal() != NULL)
+#         array[i] = input
+#         i.write(i + 1)
+#         #print_ln("input available")
+#
+#         else_then()
+#         condition.write(0)
+#         #print_ln("end of input")
+#         array[i] = NULL
+#         end_if()
+#
+#         print_ln("%s", condition)
+#         close_channel(channel)
+#         return condition > 0
+#     print_ln("---------")
+#     print_ln("x:\n")
+#     @for_range(19)
+#     def _(i):
+#         print_ln("%s", array[i].reveal())
+#     print_ln("---------")
+#
+#
+#     return array
+
+def get_external_private_array(cust_vector, channel, player):
+    open_channel(channel)
+    condition = MemValue(cint(1))
+    i = MemValue(cint(0))
+
+    @do_while
+    def _():
+        input = sint.get_private_input_from(player)
+        #print_ln("input reveal %s", input.reveal())
+
+        if_then(input.reveal() != NULL)
+        cust_vector.push_back(input)
+        i.write(i + 1)
+        #print_ln("input available")
+
+        else_then()
+        condition.write(0)
+        #print_ln("end of input")
+        end_if()
+
+        #print_ln("%s", condition)
+        return condition > 0
+
+    close_channel(channel)
+
+x = CustVector()
+
+get_external_private_array(x, 5, 1)
+
+x.show()
+print_ln("=============")
+
+length = x.length()
+element = x.back()
+
+print_ln("length: %s", length.reveal())
+print_ln("elemnt: %s", element.reveal())
+
+##########################===================
+# def train_test_split(x_array, y_array, split):
+#     x_test = sfloat.Array(15)
+#     y_test = sfloat.Array(15)
+#     # x_copy_array = x_array
+#     # y_copy_array = y_array
+#
+#     get_nbit(x_test)
+#         # not sure if it is more efficient to call get_nbit
+#     # index = sint.get_random_int(get_nbit(x_test))
+#     # # check if index within range of x_test array
+#     # @while_do(index >= len(x_test))
+#     # def _(j):
+#     #     index = sint.get_random_int(get_nbit(x_test))
+#     # return
+#     # # if fraction of -1s is large, do rearrangement to new array
+#     #     # x_text = rearange(x_test)
+#     # return i+1
+#
+# # get number of bits to create random int
+# def get_nbit(array):
+#     arr_length = sfix(len(array))
+#     log2_length = mpc_math.log2_fx(arr_length)
+#     nbit = mpc_math.floor_fx(log2_length) + 1
+#     nbit = floatingpoint.Trunc(nbit.v, nbit.k - nbit.f, nbit.f, nbit.kappa)
+#     print_ln("%s", type(nbit))
+#     nbit = nbit.reveal()
+#     print_ln("%s", type(nbit))
+#     yo = nbit.k
+#     print_ln("%s", type(yo))
+#     print_ln("%s", yo)
+#
+#     return nbit
+#
+# # print_ln("++++++++++++++")
+# # print_ln("%s", log2_x.reveal())
+# # print_ln("%s", exponent.reveal())
+# # print_ln("++++++++++++++")
+#
+# train_test_split(x_tr, y_tr, sfloat(0.6))
+
+#################################=====================
 
 
-print_ln("---------")
-print_ln("x:\n")
-@for_range(X_ARRAY_LENGTH)
-def _(i):
-    print_ln("%s", x[i].reveal())
+###########
+#
+# def get_array_lengths(array, split):
+#     count = MemValue(sint(0))
+#     condition = MemValue(cint(1))
+#
+#     # while loop running through array stopping at -123456789 and counting elements
+#     @do_while
+#     def _():
+#         print_ln("array[count] %s", array[count.reveal()].reveal())
+#         if_then(array[count.reveal()].reveal() == -123456789)
+#         condition.write(0)
+#
+#         else_then()
+#         count.write(count + 1)
+#         end_if()
+#
+#         return condition > 0
+#
+#     print_ln("length %s", count.reveal())
+#
+#
+#     # workaround by first casting count to sint, since direct cast from
+#     # MemValue to sfloat not possible
+#     length_sint = sint(count)
+#     length_sfloat = sfloat(length_sint)
+#
+#     length_train = length_sfloat * sfloat(split)
+#     print_ln("ll %s", length_train.reveal())
+#     # round length_train up
+#     # TODO implement this with FLRound
+#     length_train = sfix(length_train)
+#     length_train = mpc_math.floor_fx(length_train) + 1
+#
+#     length_test = sfix(len(array)) - length_train
+#     print_ln("ltrain %s", length_train.reveal())
+#     print_ln("ltest %s", length_test.reveal())
+#     return length_train, length_test
+#
+# # get number of bits to create random int
+# def get_nbit(l_train):
+#     log2_length = mpc_math.log2_fx(l_train)
+#     nbit = mpc_math.floor_fx(log2_length) + 1
+#     return nbit
+#
+# # split data set into train and test set
+# def split_up(array, split):
+#     # initi x_train and x_test (array length has to be known at compile time,
+#     # therefore, initialization with taking split into acocunt not possible)
+#     x_train = sfloat.Array(MAX_ARRAY_LENGTH)
+#     x_test = sfloat.Array(MAX_ARRAY_LENGTH)
+#
+#     length_train, length_test = get_array_lengths(array, split)
+#     print_ln("ltrain %s", length_train.reveal())
+#     print_ln("ltest %s", length_test.reveal())
+#     print_ln("ttrain %s", type(length_train))
+#     print_ln("ttest %s", type(length_test))
+#
+#     nbit = get_nbit(length_train)
+#     print_ln("%s", nbit.reveal())
+#     print_ln("%s", type(nbit))
+#
+#     # cast sfix to sint
+#     nbit = floatingpoint.Trunc(nbit.v, nbit.k - nbit.f, nbit.f, nbit.kappa)
+#     print_ln("%s", nbit.reveal())
+#     print_ln("%s", type(nbit))
+#
+#     # create source of randomness
+#     index = sint.get_random_int(4)
+#     print_ln("%s", index.reveal())
+#
+#
+#     # every
+#
+# test_arr = sint.Array(21)
+#
+# @for_range(20)
+# def _(i):
+#     test_arr[i] = i
+#
+# test_arr[18] = -123456789
+# print_ln("======= array =====")
+# @for_range(21)
+# def _(i):
+#     print_ln("%s", test_arr[i].reveal())
+#
+# split = 0.6
+# length = len(test_arr)
+# print_ln("%s", length)
+# print_ln("%s", type(length))
+# split_up(test_arr, split)
+#
+#
+# def train_test_split(x_array, y_array, split):
+#     train_size = split * sint(len(x_array))
+#     test_size = len(x_array) - train_size
+#     x_train = sfloat.Array(train_size)
+#     y_train = sfloat.Array(train_size)
+#     x_test = sfloat.Array(test_size)
+#     y_test = sfloat.Array(test_size)
+#     # x_copy_array = x_array
+#     # y_copy_array = y_array
+#
+#     @while_do(lambda a: a <= train_size, 0)
+#     def _(i):
+#         # not sure if it is more efficient to call get_nbit
+#         index = sint.get_random_int(get_nbit(x_test))
+#         # check if index within range of x_test array
+#         @while_do(index >= len(x_test))
+#         def _(j):
+#             index = sint.get_random_int(get_nbit(x_test))
+#         return
+#         # if fraction of -1s is large, do rearrangement to new array
+#             # x_text = rearange(x_test)
+#         return i+1
+#
 
-print_ln("---------")
-
-close_channel(5)
 
 # sum function
 def sum(array):
