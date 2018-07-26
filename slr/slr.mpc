@@ -166,24 +166,34 @@ MAX_ARRAY_LENGTH = 10000
 
 ## Next # TODO:
 # 1. Split
-# 2. round
-# 3. Comments
-# 4. test
+# 2. Comments
+# 3. test on swedish set
 
 
 ## preliminary implemetation of svector. To be improved ##
+# TODO: implement indexing
+# TODO: use i instead of self.end_ptr all the time
 class CustVector(object):
 
     def __init__(self):
         self.s_vector = sint.Array(MAX_ARRAY_LENGTH)
         self.end_ptr = MemValue(-1)
         self.s_vector[0] = NULL
+        # self.i = MemValue(NULL)
 
     @method_block
-    def pop_back(self):
-        element = self.s_vector[self.end_ptr]
-        self.s_vector[self.end_ptr] = NULL
-        self.end_ptr.write(self.end_ptr - 1)
+    def pop(self, index=None):
+        if index is None:
+            i = self.end_ptr + 0
+            print_ln("before %s", self.end_ptr)
+            self.end_ptr.write(self.end_ptr - 1)
+            print_ln("after %s", self.end_ptr)
+        else:
+            i = index
+
+        print_ln("xx %s", i)
+        element = self.s_vector[i]
+        self.s_vector[i] = NULL
         return element
 
     @method_block
@@ -203,7 +213,7 @@ class CustVector(object):
 
     @method_block
     def length(self):
-        return self.end_ptr + 1
+        return sint(self.end_ptr + 1)
 
     # show the first x elements (length) of the vector
     @method_block
@@ -240,14 +250,32 @@ x = CustVector()
 
 get_external_private_array(x, 1005, 1)
 
-x.show(25)
-print_ln("=============")
-
+x.show(20)
+print_ln("----")
 length = x.length()
 element = x.back()
-
 print_ln("length: %s", length.reveal())
 print_ln("elemnt: %s", element.reveal())
+print_ln("=============")
+
+
+el1 = x.pop(2)
+el2 = x.pop(8)
+el3 = x.pop()
+el4 = x.pop()
+x.show(20)
+print_ln("----")
+length = x.length()
+element = x.back()
+print_ln("length: %s", length.reveal())
+print_ln("elemnt: %s", element.reveal())
+print_ln("elemnt1: %s", el1.reveal())
+print_ln("elemnt2: %s", el2.reveal())
+print_ln("elemnt3: %s", el3.reveal())
+print_ln("elemnt4: %s", el4.reveal())
+print_ln("=============")
+
+
 
 # OLD SPLIT FUNCTION (not working)##########################===================
 # def train_test_split(x_array, y_array, split):
@@ -294,98 +322,105 @@ print_ln("elemnt: %s", element.reveal())
 
 
 # new split implementation (not ready yet) ###########
-#
-# def get_array_lengths(array, split):
-#     count = MemValue(sint(0))
-#     condition = MemValue(cint(1))
-#
-#     # while loop running through array stopping at -123456789 and counting elements
-#     @do_while
-#     def _():
-#         print_ln("array[count] %s", array[count.reveal()].reveal())
-#         if_then(array[count.reveal()].reveal() == -123456789)
-#         condition.write(0)
-#
-#         else_then()
-#         count.write(count + 1)
-#         end_if()
-#
-#         return condition > 0
-#
-#     print_ln("length %s", count.reveal())
-#
-#
-#     # workaround by first casting count to sint, since direct cast from
-#     # MemValue to sfloat not possible
-#     length_sint = sint(count)
-#     length_sfloat = sfloat(length_sint)
-#
-#     length_train = length_sfloat * sfloat(split)
-#     print_ln("ll %s", length_train.reveal())
-#     # round length_train up
-#     # TODO implement this with FLRound
-#     length_train = sfix(length_train)
-#     length_train = mpc_math.floor_fx(length_train) + 1
-#
-#     length_test = sfix(len(array)) - length_train
-#     print_ln("ltrain %s", length_train.reveal())
-#     print_ln("ltest %s", length_test.reveal())
-#     return length_train, length_test
-#
-# # get number of bits to create random int
-# def get_nbit(l_train):
-#     log2_length = mpc_math.log2_fx(l_train)
-#     nbit = mpc_math.floor_fx(log2_length) + 1
-#     return nbit
-#
-# # split data set into train and test set
-# def split_up(array, split):
-#     # initi x_train and x_test (array length has to be known at compile time,
-#     # therefore, initialization with taking split into acocunt not possible)
-#     x_train = sfloat.Array(MAX_ARRAY_LENGTH)
-#     x_test = sfloat.Array(MAX_ARRAY_LENGTH)
-#
-#     length_train, length_test = get_array_lengths(array, split)
-#     print_ln("ltrain %s", length_train.reveal())
-#     print_ln("ltest %s", length_test.reveal())
-#     print_ln("ttrain %s", type(length_train))
-#     print_ln("ttest %s", type(length_test))
-#
-#     nbit = get_nbit(length_train)
-#     print_ln("%s", nbit.reveal())
-#     print_ln("%s", type(nbit))
-#
-#     # cast sfix to sint
-#     nbit = floatingpoint.Trunc(nbit.v, nbit.k - nbit.f, nbit.f, nbit.kappa)
-#     print_ln("%s", nbit.reveal())
-#     print_ln("%s", type(nbit))
-#
-#     # create source of randomness
-#     index = sint.get_random_int(4)
-#     print_ln("%s", index.reveal())
-#
-#
-#     # every
-#
-# test_arr = sint.Array(21)
-#
-# @for_range(20)
-# def _(i):
-#     test_arr[i] = i
-#
-# test_arr[18] = -123456789
-# print_ln("======= array =====")
-# @for_range(21)
-# def _(i):
-#     print_ln("%s", test_arr[i].reveal())
-#
-# split = 0.6
-# length = len(test_arr)
-# print_ln("%s", length)
-# print_ln("%s", type(length))
-# split_up(test_arr, split)
-#
-#
+def get_array_lengths(array, split):
+    count = MemValue(sint(0))
+    condition = MemValue(cint(1))
+
+    # while loop running through array stopping at -123456789 and counting elements
+    @do_while
+    def _():
+        print_ln("array[count] %s", array[count.reveal()].reveal())
+        if_then(array[count.reveal()].reveal() == -123456789)
+        condition.write(0)
+
+        else_then()
+        count.write(count + 1)
+        end_if()
+
+        return condition > 0
+
+    print_ln("length %s", count.reveal())
+
+
+    # workaround by first casting count to sint, since direct cast from
+    # MemValue to sfloat not possible
+    length_sint = sint(count)
+    length_sfloat = sfloat(length_sint)
+
+    length_train = length_sfloat * sfloat(split)
+    print_ln("ll %s", length_train.reveal())
+    # round length_train up
+    # TODO implement this with FLRound
+    length_train = sfix(length_train)
+    length_train = mpc_math.floor_fx(length_train) + 1
+
+    length_test = sfix(len(array)) - length_train
+    print_ln("ltrain %s", length_train.reveal())
+    print_ln("ltest %s", length_test.reveal())
+    return length_train, length_test
+
+# get number of bits to create random int
+def get_nbit(l_train):
+    log2_length = mpc_math.log2_fx(l_train)
+    nbit = mpc_math.floor_fx(log2_length) + 1
+    return nbit
+
+# split data set into train and test set
+def split_up(data, split):
+    # initi x_train and x_test (array length has to be known at compile time,
+    # therefore, initialization with taking split into acocunt not possible)
+    train = CustVector()
+    test = CustVector()
+    data_length = data.length()
+    print_ln("%s", type(data_length))
+    print_ln("%s", data_length.reveal())
+    print_ln("%s", type(split))
+
+    # calculate lengths of train and test arrays
+    train_length = sfloat(data_length) * sfloat(split)
+    train_length = mpc_math.floor_fx(sfix(train_length)) + 1
+    test_length = data_length - train_length
+    print_ln("==: %s", train_length.reveal())
+    print_ln("==: %s", test_length.reveal())
+
+    i = MemValue(sint(0))
+
+    #print_ln("==: %s", data[4].reveal())
+
+
+
+    # @while_do(lambda a: a < array_length, 0)
+    # def _():
+    #     index = randomxxxx
+    #     train.push_back(data[index])
+
+
+
+    # length_train, length_test = get_array_lengths(array, split)
+    # print_ln("ltrain %s", length_train.reveal())
+    # print_ln("ltest %s", length_test.reveal())
+
+    # print_ln("ttrain %s", type(length_train))
+    # print_ln("ttest %s", type(length_test))
+    #
+    # nbit = get_nbit(length_train)
+    # print_ln("%s", nbit.reveal())
+    # print_ln("%s", type(nbit))
+    #
+    # # cast sfix to sint
+    # nbit = floatingpoint.Trunc(nbit.v, nbit.k - nbit.f, nbit.f, nbit.kappa)
+    # print_ln("%s", nbit.reveal())
+    # print_ln("%s", type(nbit))
+    #
+    # # create source of randomness
+    # index = sint.get_random_int(4)
+    # print_ln("%s", index.reveal())
+
+split = 0.7
+#x_train, x_test = split_up(x, split)
+split_up(x, split)
+
+
 # def train_test_split(x_array, y_array, split):
 #     train_size = split * sint(len(x_array))
 #     test_size = len(x_array) - train_size
@@ -408,9 +443,11 @@ print_ln("elemnt: %s", element.reveal())
 #         # if fraction of -1s is large, do rearrangement to new array
 #             # x_text = rearange(x_test)
 #         return i+1
-#
 
-# sum function
+################################################################
+
+## simple linear regression ##
+## sum function
 def sum(array):
     result_array = sfloat.Array(1)
     result_array[0] = 0.0
