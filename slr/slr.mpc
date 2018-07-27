@@ -9,6 +9,7 @@
 # - Enable external input of sint arrays
 # - implement ability to split arrays
 # - commment code
+# - check if NULL is implemented in a good way / if thats best practice
 # - split in seperate files
 # - Ensure correct function of code and testing
 # (do not use arrays but MemValue)
@@ -20,7 +21,6 @@
 # SCALE-MAMBA library
 
 from Compiler import mpc_math, floatingpoint
-
 from random import seed, randrange
 
 sfloat.vlen = 15 # Length of mantissa in bits
@@ -29,146 +29,11 @@ sfloat.kappa = 4 # Statistical security parameter for floats
 
 NULL = -123456789
 
-# data input quick fix
-x_tr = sfloat.Array(38)
-# - consider creating vector style array (with pointer to end_ptr)
-x_te = sfloat.Array(25)
-y_tr = sfloat.Array(38)
-y_te = sfloat.Array(25)
-
-x_tr[0] = sfloat(108)
-y_tr[0] = sfloat(392.5)
-x_tr[1] = sfloat(19)
-y_tr[1] = sfloat(46.2)
-x_tr[2] = sfloat(13)
-y_tr[2] = sfloat(15.7)
-x_tr[3] = sfloat(124)
-y_tr[3] = sfloat(422.2)
-x_tr[4] = sfloat(40)
-y_tr[4] = sfloat(119.4)
-x_tr[5] = sfloat(57)
-y_tr[5] = sfloat(170.9)
-x_tr[6] = sfloat(23)
-y_tr[6] = sfloat(56.9)
-x_tr[7] = sfloat(14)
-y_tr[7] = sfloat(77.5)
-x_tr[8] = sfloat(45)
-y_tr[8] = sfloat(214)
-x_tr[9] = sfloat(10)
-y_tr[9] = sfloat(65.3)
-x_tr[10] = sfloat(5)
-y_tr[10] = sfloat(20.9)
-x_tr[11] = sfloat(48)
-y_tr[11] = sfloat(248.1)
-x_tr[12] = sfloat(11)
-y_tr[12] = sfloat(23.5)
-x_tr[13] = sfloat(23)
-y_tr[13] = sfloat(39.6)
-x_tr[14] = sfloat(7)
-y_tr[14] = sfloat(48.8)
-x_tr[15] = sfloat(2)
-y_tr[15] = sfloat(6.6)
-x_tr[16] = sfloat(24)
-y_tr[16] = sfloat(134.9)
-x_tr[17] = sfloat(6)
-y_tr[17] = sfloat(50.9)
-x_tr[18] = sfloat(3)
-y_tr[18] = sfloat(4.4)
-x_tr[19] = sfloat(23)
-y_tr[19] = sfloat(113)
-x_tr[20] = sfloat(6)
-y_tr[20] = sfloat(14.8)
-x_tr[21] = sfloat(9)
-y_tr[21] = sfloat(48.7)
-x_tr[22] = sfloat(9)
-y_tr[22] = sfloat(52.1)
-x_tr[23] = sfloat(3)
-y_tr[23] = sfloat(13.2)
-x_tr[24] = sfloat(29)
-y_tr[24] = sfloat(103.9)
-x_tr[25] = sfloat(7)
-y_tr[25] = sfloat(77.5)
-x_tr[26] = sfloat(4)
-y_tr[26] = sfloat(11.8)
-x_tr[27] = sfloat(20)
-y_tr[27] = sfloat(98.1)
-x_tr[28] = sfloat(7)
-y_tr[28] = sfloat(27.9)
-x_tr[29] = sfloat(4)
-y_tr[29] = sfloat(38.1)
-x_tr[30] = sfloat(0)
-y_tr[30] = sfloat(0)
-x_tr[31] = sfloat(25)
-y_tr[31] = sfloat(69.2)
-x_tr[32] = sfloat(6)
-y_tr[32] = sfloat(14.6)
-x_tr[33] = sfloat(5)
-y_tr[33] = sfloat(40.3)
-x_tr[34] = sfloat(22)
-y_tr[34] = sfloat(161.5)
-x_tr[35] = sfloat(11)
-y_tr[35] = sfloat(57.2)
-x_tr[36] = sfloat(61)
-y_tr[36] = sfloat(217.6)
-x_tr[37] = sfloat(12)
-y_tr[37] = sfloat(58.1)
-x_te[0] = sfloat(4)
-y_te[0] = sfloat(12.6)
-x_te[1] = sfloat(16)
-y_te[1] = sfloat(59.6)
-x_te[2] = sfloat(13)
-y_te[2] = sfloat(89.9)
-x_te[3] = sfloat(60)
-y_te[3] = sfloat(202.4)
-x_te[4] = sfloat(41)
-y_te[4] = sfloat(181.3)
-x_te[5] = sfloat(37)
-y_te[5] = sfloat(152.8)
-x_te[6] = sfloat(55)
-y_te[6] = sfloat(162.8)
-x_te[7] = sfloat(41)
-y_te[7] = sfloat(73.4)
-x_te[8] = sfloat(11)
-y_te[8] = sfloat(21.3)
-x_te[9] = sfloat(27)
-y_te[9] = sfloat(92.6)
-x_te[10] = sfloat(8)
-y_te[10] = sfloat(76.1)
-x_te[11] = sfloat(3)
-y_te[11] = sfloat(39.9)
-x_te[12] = sfloat(17)
-y_te[12] = sfloat(142.1)
-x_te[13] = sfloat(13)
-y_te[13] = sfloat(93)
-x_te[14] = sfloat(13)
-y_te[14] = sfloat(31.9)
-x_te[15] = sfloat(15)
-y_te[15] = sfloat(32.1)
-x_te[16] = sfloat(8)
-y_te[16] = sfloat(55.6)
-x_te[17] = sfloat(29)
-y_te[17] = sfloat(133.3)
-x_te[18] = sfloat(30)
-y_te[18] = sfloat(194.5)
-x_te[19] = sfloat(24)
-y_te[19] = sfloat(137.9)
-x_te[20] = sfloat(9)
-y_te[20] = sfloat(87.4)
-x_te[21] = sfloat(31)
-y_te[21] = sfloat(209.8)
-x_te[22] = sfloat(14)
-y_te[22] = sfloat(95.5)
-x_te[23] = sfloat(53)
-y_te[23] = sfloat(244.6)
-x_te[24] = sfloat(26)
-y_te[24] = sfloat(187.5)
-
 MAX_ARRAY_LENGTH = 10000
 MAX_ARRAY_LENGTH_NBIT = 14
 
 
 ## Next # TODO:
-# 1. Split
 # 2. Comments
 # 3. split files
 # 4. test on swedish set
@@ -209,7 +74,7 @@ class CustVector(object):
     def set_element(self, index, element):
         # TODO: change this to [] operator
         self.s_vector[index] = element
-        print_ln("element %s at %s changed!", element.reveal(), index)
+        # print_ln("element %s at %s changed!", element.reveal(), index)
 
     @method_block
     def push_back(self, element):
@@ -237,7 +102,6 @@ class CustVector(object):
         def _(i):
             print_ln("%s", self.s_vector[i].reveal())
 
-
 ## function to read in external private array ##
 def get_external_private_array(cust_vector, channel, player):
     open_channel(channel)
@@ -261,142 +125,95 @@ def get_external_private_array(cust_vector, channel, player):
 
     close_channel(channel)
 
-x = CustVector()
-get_external_private_array(x, 1005, 1)
 
-## use this for testing CustVector
-x.show(20)
-print_ln("----")
-length = x.length()
-element = x.back()
-print_ln("length: %s", length.reveal())
-print_ln("elemnt: %s", element.reveal())
-print_ln("=============")
-
-x.show(20)
-print_ln("----")
-length = x.length()
-element = x.back()
-print_ln("length: %s", length.reveal())
-print_ln("elemnt: %s", element.reveal())
-print_ln("=============")
-
-
-
-# OLD SPLIT FUNCTION (not working)##########################===================
-# def train_test_split(x_array, y_array, split):
-#     x_test = sfloat.Array(15)
-#     y_test = sfloat.Array(15)
-#     # x_copy_array = x_array
-#     # y_copy_array = y_array
+# #############################
+# x_tr = CustVector()
+# x_te = CustVector()
+# y_tr = CustVector()
+# y_te = CustVector()
 #
-#     get_nbit(x_test)
-#         # not sure if it is more efficient to call get_nbit
-#     # index = sint.get_random_int(get_nbit(x_test))
-#     # # check if index within range of x_test array
-#     # @while_do(index >= len(x_test))
-#     # def _(j):
-#     #     index = sint.get_random_int(get_nbit(x_test))
-#     # return
-#     # # if fraction of -1s is large, do rearrangement to new array
-#     #     # x_text = rearange(x_test)
-#     # return i+1
+# x_tr.push_back(5)
+# x_tr.push_back(20)
+# x_tr.push_back(3)
+# x_tr.push_back(11)
+# x_tr.push_back(6)
+# x_tr.push_back(12)
+# x_tr.push_back(18)
+# x_tr.push_back(13)
+# x_tr.push_back(14)
+# x_tr.push_back(19)
+# x_tr.push_back(10)
+# x_tr.push_back(7)
+# x_tr.push_back(2)
+# x_tr.push_back(9)
 #
-# # get number of bits to create random int
-# def get_nbit(array):
-#     arr_length = sfix(len(array))
-#     log2_length = mpc_math.log2_fx(arr_length)
-#     nbit = mpc_math.floor_fx(log2_length) + 1
-#     nbit = floatingpoint.Trunc(nbit.v, nbit.k - nbit.f, nbit.f, nbit.kappa)
-#     print_ln("%s", type(nbit))
-#     nbit = nbit.reveal()
-#     print_ln("%s", type(nbit))
-#     yo = nbit.k
-#     print_ln("%s", type(yo))
-#     print_ln("%s", yo)
+# x_te.push_back(1)
+# x_te.push_back(4)
+# x_te.push_back(8)
+# x_te.push_back(15)
+# x_te.push_back(16)
+# x_te.push_back(17)
 #
-#     return nbit
+# y_tr.push_back(17)
+# y_tr.push_back(4)
+# y_tr.push_back(78)
+# y_tr.push_back(45)
+# y_tr.push_back(64)
+# y_tr.push_back(53)
+# y_tr.push_back(2)
+# y_tr.push_back(42)
+# y_tr.push_back(41)
+# y_tr.push_back(44)
+# y_tr.push_back(9)
+# y_tr.push_back(23)
+# y_tr.push_back(32)
+# y_tr.push_back(14)
 #
-# # print_ln("++++++++++++++")
-# # print_ln("%s", log2_x.reveal())
-# # print_ln("%s", exponent.reveal())
-# # print_ln("++++++++++++++")
-#
-# train_test_split(x_tr, y_tr, sfloat(0.6))
-
-#################################=====================
-
-
-# new split implementation (not ready yet) ###########
-def get_array_lengths(array, split):
-    count = MemValue(sint(0))
-    condition = MemValue(cint(1))
-
-    # while loop running through array stopping at -123456789 and counting elements
-    @do_while
-    def _():
-        print_ln("array[count] %s", array[count.reveal()].reveal())
-        if_then(array[count.reveal()].reveal() == -123456789)
-        condition.write(0)
-
-        else_then()
-        count.write(count + 1)
-        end_if()
-
-        return condition > 0
-
-    print_ln("length %s", count.reveal())
+# y_te.push_back(66)
+# y_te.push_back(12)
+# y_te.push_back(14)
+# y_te.push_back(94)
+# y_te.push_back(52)
+# y_te.push_back(18)
+# #################################
 
 
-    # workaround by first casting count to sint, since direct cast from
-    # MemValue to sfloat not possible
-    length_sint = sint(count)
-    length_sfloat = sfloat(length_sint)
+## use this for testing CustVector ##
+def test_Custvector(vector):
+    get_external_private_array(vector, 1005, 1)
+    vector.show(20)
+    print_ln("----")
+    length = vector.length()
+    element = vector.back()
+    print_ln("length: %s", length.reveal())
+    print_ln("elemnt: %s", element.reveal())
+    print_ln("=============")
 
-    length_train = length_sfloat * sfloat(split)
-    print_ln("ll %s", length_train.reveal())
-    # round length_train up
-    # TODO implement this with FLRound
-    length_train = sfix(length_train)
-    length_train = mpc_math.floor_fx(length_train) + 1
+    vector.show(20)
+    print_ln("----")
+    length = vector.length()
+    element = vector.back()
+    print_ln("length: %s", length.reveal())
+    print_ln("elemnt: %s", element.reveal())
+    print_ln("=============")
 
-    length_test = sfix(len(array)) - length_train
-    print_ln("ltrain %s", length_train.reveal())
-    print_ln("ltest %s", length_test.reveal())
-    return length_train, length_test
-
-# get number of bits to create random int
-def get_nbit(l_train):
-    log2_length = mpc_math.log2_fx(l_train)
-    nbit = mpc_math.floor_fx(log2_length) + 1
-    return nbit
-
-# split data set into train and test set
+## split data set into train and test set ##
 def split_up(data, split):
-    # initi x_train and x_test (array length has to be known at compile time,
+    # initialize x_train and x_test (array length has to be known at compile time,
     # therefore, initialization with taking split into acocunt not possible)
     train = CustVector()
     test = CustVector()
     data_length = data.length()
-    print_ln("%s", type(data_length))
-    print_ln("%s", data_length.reveal())
-    print_ln("%s", type(split))
 
     # calculate lengths of train and test arrays
     train_target_length = sfloat(data_length) * sfloat(split)
     train_target_length = mpc_math.floor_fx(sfix(train_target_length)) + 1
     test_target_length = data_length - train_target_length
-    print_ln("==: %s", train_target_length.reveal())
-    print_ln("==: %s", test_target_length.reveal())
 
+    # cast train_target_length to sint()
     train_target_length_sint = floatingpoint.Trunc(train_target_length.v, train_target_length.k - train_target_length.f, train_target_length.f, train_target_length.kappa)
     A = sint.Array(1)
     A[0] = sint(train_target_length_sint)
-
-    print_ln("------------------------")
-    data.show(20)
-    print_ln("------------------------")
-
 
     @do_while
     def _():
@@ -408,203 +225,218 @@ def split_up(data, split):
         # at that index
         @do_while
         def _():
+            # if 1
             if_then(index.reveal() < data_length.reveal())
-            print_ln("index in 1 %s", index.reveal())
             # TODO make comparison private
             element.write(data.get_element(index.reveal()).reveal())
+
+            # if 2
             if_then(element != cint(NULL))
-            # print_ln("index in 2 %s", index.reveal())
             ind = index.reveal()
             data.set_element(ind, NULL)
             condition.write(0)
+
+            # elseif 2
             else_then()
             count.write(count + 1)
             index.write(sint.get_random_int(MAX_ARRAY_LENGTH_NBIT))
+            # close if 2
             end_if()
 
+            # elseif 1
             else_then()
-            # print_ln("index in 3 %s", index.reveal())
             count.write(count + 1)
             index.write(sint.get_random_int(MAX_ARRAY_LENGTH_NBIT))
+            # close if 1
             end_if()
 
             return condition > 0
 
-        print_ln("count %s", count)
-        print_ln("element %s", element)
-        print_ln("index out %s", index.reveal())
         train.push_back(element)
+        # print_ln("element %s", element)
+        # print_ln("index out %s", index.reveal())
         print_ln("train length %s", train.length().reveal())
         print_ln("train traget length %s", A[0].reveal())
 
         delta_check = A[0].reveal() - train.length().reveal()
         print_ln("delta_check %s", delta_check)
 
-        #yo_1 = MemValue(train.length().reveal())
-        # yo_1 = train.length().reveal()
-        # yo_2 = train_target_length_mem
-        # print_ln("type1 %s", type(yo_1))
-        # print_ln("type1 %s", type(yo_2))
-        # delta_check = (yo_2 - yo_1)
-        # print_ln("type2 %s", type(delta_check))
-        # print_ln("delta %s", delta_check)
-
         return delta_check > 0
 
-    print_ln("------------------------")
-    train.show(20)
-    print_ln("------------------------")
+    # print_ln("------------------------")
+    # train.show(20)
+    # print_ln("------------------------")
+    #
+    # print_ln("------------------------")
+    # data.show(20)
+    # print_ln("------------------------")
 
-    print_ln("------------------------")
-    data.show(20)
-    print_ln("------------------------")
-
-
-    # now loop over data vector to assign all
+    # loop over data vector to assign all left in data to test
     @for_range(data_length.reveal())
     def _(i):
-        # shouldnt htis also work with just the i, not cint(i)
         element = data.get_element(cint(i))
         if_then(element.reveal() != NULL)
         test.push_back(element)
         end_if()
 
-    print_ln("------------------------")
-    test.show(20)
-    print_ln("------------------------")
+    # print_ln("------------------------")
+    # test.show(20)
+    # print_ln("------------------------")
+
+    return train, test
 
 
-
-    # @while_do(lambda a: a < array_length, 0)
-    # def _():
-    #     index = randomxxxx
-    #     train.push_back(data[index])
-
-
-
-    # length_train, length_test = get_array_lengths(array, split)
-    # print_ln("ltrain %s", length_train.reveal())
-    # print_ln("ltest %s", length_test.reveal())
-
-    # print_ln("ttrain %s", type(length_train))
-    # print_ln("ttest %s", type(length_test))
-    #
-    # nbit = get_nbit(length_train)
-    # print_ln("%s", nbit.reveal())
-    # print_ln("%s", type(nbit))
-    #
-    # # cast sfix to sint
-    # nbit = floatingpoint.Trunc(nbit.v, nbit.k - nbit.f, nbit.f, nbit.kappa)
-    # print_ln("%s", nbit.reveal())
-    # print_ln("%s", type(nbit))
-    #
-    # # create source of randomness
-    # index = sint.get_random_int(4)
-    # print_ln("%s", index.reveal())
-
-split = 0.7
-#x_train, x_test = split_up(x, split)
-split_up(x, split)
-
-
-# def train_test_split(x_array, y_array, split):
-#     train_size = split * sint(len(x_array))
-#     test_size = len(x_array) - train_size
-#     x_train = sfloat.Array(train_size)
-#     y_train = sfloat.Array(train_size)
-#     x_test = sfloat.Array(test_size)
-#     y_test = sfloat.Array(test_size)
-#     # x_copy_array = x_array
-#     # y_copy_array = y_array
-#
-#     @while_do(lambda a: a <= train_size, 0)
-#     def _(i):
-#         # not sure if it is more efficient to call get_nbit
-#         index = sint.get_random_int(get_nbit(x_test))
-#         # check if index within range of x_test array
-#         @while_do(index >= len(x_test))
-#         def _(j):
-#             index = sint.get_random_int(get_nbit(x_test))
-#         return
-#         # if fraction of -1s is large, do rearrangement to new array
-#             # x_text = rearange(x_test)
-#         return i+1
-
-################################################################
-
-## simple linear regression ##
-## sum function
-def sum(array):
+### simple linear regression ###
+## sum function ##
+def sum(vector):
     result_array = sfloat.Array(1)
     result_array[0] = 0.0
-    @while_do(lambda a: a < len(array), 0)
+    @while_do(lambda a: a < vector.length().reveal(), 0)
     def _(i):
-        result_array[0] = result_array[0] + array[i]
+        result_array[0] = result_array[0] + sfloat(vector.get_element(i))
         return i+1
     return result_array[0]
 
-# mean function
-def mean(array):
-    return sum(array) / sfloat(len(array))
+## mean function ##
+def mean(vector):
+    return sum(vector) / sfloat(vector.length())
 
-# rmse_metric
-def rmse_metric(actual, predicted):
+## rmse_metric ##
+def rmse_metric(actual, predicted_array):
     sum_err = sfloat.Array(1)
     sum_err[0] = 0.0
     rmse = sfloat(0.0)
+    actual_length = actual.length().reveal()
 
-    @for_range(len(actual))
+    @for_range(actual_length)
     def _(i):
-        prediction_err = predicted[i] - actual[i]
+        prediction_err = predicted_array[i] - sfloat(actual.get_element(i))
+        print_ln("pred_err %s", prediction_err.reveal())
         sum_err[0] += (prediction_err ** 2)
-    mean_err = sum_err[0] / sfloat(len(actual))
+
+    print_ln("sum_err %s", sum_err[0].reveal())
+    mean_err = sum_err[0] / sfloat(sint(actual_length))
+    print_ln("act_len %s", actual_length)
+    print_ln("act_len type %s", type(actual_length))
+    print_ln("sfloat sint act_len %s", sfloat(sint(actual_length)).reveal())
+    print_ln("sfloat act_len %s", sfloat(actual_length).reveal())
+    print_ln("mean_err %s", mean_err.reveal())
     rmse = mpc_math.sqrt_simplified_fx(sfix(mean_err))
     return rmse
 
-# covariance
-def covariance(x_array, x_mean, y_array, y_mean):
+## covariance ##
+def covariance(x_vector, x_mean, y_vector, y_mean):
     covar = sfloat.Array(1)
     covar[0] = 0.0
-    @for_range(len(x_array))
+    @for_range(x_vector.length().reveal())
     def _(i):
-        covar[0] = covar[0] + (x_array[i] - x_mean) * (y_array[i] - y_mean)
+        covar[0] = covar[0] + (sfloat(x_vector.get_element(i)) - x_mean) * (sfloat(y_vector.get_element(i)) - y_mean)
     return covar[0]
 
-# variance
-def variance(array, mean):
+## variance ##
+def variance(vector, mean):
     var = sfloat.Array(1)
     var[0] = 0.0
-    # TODO try this with a address allocation (documentaion page 41)
-    @for_range(len(array))
+    @for_range(vector.length().reveal())
     def _(i):
-        var[0] = var[0] + (array[i] - mean) ** 2
+        var[0] = var[0] + (sfloat(vector.get_element(i)) - mean) ** 2
     return var[0]
 
-# coefficients
-def coefficients(x_array, y_array):
-    x_mean = mean(x_array)
-    y_mean = mean(y_array)
-    b1 = covariance(x_array, x_mean, y_array, y_mean) / variance(x_array, x_mean)
+## coefficients ##
+def coefficients(x_vector, y_vector):
+    x_mean = mean(x_vector)
+    y_mean = mean(y_vector)
+    b1 = covariance(x_vector, x_mean, y_vector, y_mean) / variance(x_vector, x_mean)
     b0 = y_mean - b1 * x_mean
     return b0, b1
 
-# slr algorithm
+## slr algorithm ##
 def simple_linear_regression(x_train, x_test, y_train):
-    predictions = sfloat.Array(len(x_test))
+    x_test_length = x_test.length().reveal()
+    predictions = sfloat.Array(MAX_ARRAY_LENGTH)
     b0, b1 = coefficients(x_train, y_train)
-    @for_range(len(x_test))
+    @for_range(x_test_length)
     def _(i):
-        predictions[i] = b0 + b1 * x_test[i]
+        predictions[i] = b0 + b1 * sfloat(x_test.get_element(i))
     return predictions
 
-# evaluate
+## evaluate ##
 def evaluate(x_train, x_test, y_train, y_test):
     predicted = simple_linear_regression(x_train, x_test, y_train)
     rmse = rmse_metric(y_test, predicted)
+    # print_ln("pred ty %s", type(predicted))
     return rmse
 
+###########################
+x = CustVector()
+get_external_private_array(x, 2005, 1)
+print_ln("+ this is x ++++++++++++++++++++++")
+x.show(20)
+print_ln("+++++++++++++++++++++++")
 
+y = CustVector()
+get_external_private_array(y, 3005, 1)
+print_ln("+ this is y +++++++++++++++++++++")
+y.show(20)
+print_ln("+++++++++++++++++++++++")
+
+split = 0.7
+x_train, x_test = split_up(x, split)
+y_train, y_test = split_up(y, split)
+
+print_ln("- x_train -----------------------")
+x_train.show(20)
+print_ln("------------------------")
+
+print_ln("- x_test -----------------------")
+x_test.show(20)
+print_ln("------------------------")
+
+print_ln("- y_train -----------------------")
+y_train.show(20)
+print_ln("------------------------")
+
+print_ln("- y_test -----------------------")
+y_test.show(20)
+print_ln("------------------------")
+# #######################################
+
+#################################################
+
+# x_tr = CustVector()
+# x_te = CustVector()
+# y_tr = CustVector()
+# y_te = CustVector()
+#
+# @for_range(10)
+# def _(i):
+#     x_tr.push_back(i)
+#     y_tr.push_back(i)
+#
+# @for_range(3)
+# def _(i):
+#     x_te.push_back(i)
+#     y_te.push_back(i)
+
+# vector = CustVector()
+# test_Custvector(vector)
+######################
+# sum_error 7070.603827319998
+# mean error 1178.4339712199996
+# RMSE: 34.328
+
+rmse = evaluate(x_train, x_test, y_train, y_test)
 # rmse = evaluate(x_tr, x_te, y_tr, y_te)
-# print_ln("==========================")
-# print_ln("RMSE: %s", rmse.reveal())
-# print_ln("==========================")
+print_ln("==========================")
+print_ln("RMSE: %s", rmse.reveal())
+print_ln("==========================")
+
+# # get sqrt rights
+# div = sfloat(7025.24) / sfloat(6)
+# print_ln("div %s", div.reveal())
+#
+# mean_err = sfloat(1319.763547282937452819363)
+# rmse = mpc_math.sqrt_simplified_fx(sfix(mean_err))
+# print_ln("+++++++++++++++++++")
+# print_ln("test rmse: %s", rmse.reveal())
+# print_ln("+++++++++++++++++++")
