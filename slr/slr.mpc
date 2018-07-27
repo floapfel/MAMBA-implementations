@@ -21,6 +21,8 @@
 
 from Compiler import mpc_math, floatingpoint
 
+from random import seed, randrange
+
 sfloat.vlen = 15 # Length of mantissa in bits
 sfloat.plen = 10 # Length of exponent in bits
 sfloat.kappa = 4 # Statistical security parameter for floats
@@ -162,12 +164,14 @@ x_te[24] = sfloat(26)
 y_te[24] = sfloat(187.5)
 
 MAX_ARRAY_LENGTH = 10000
+MAX_ARRAY_LENGTH_NBIT = 14
 
 
 ## Next # TODO:
 # 1. Split
 # 2. Comments
-# 3. test on swedish set
+# 3. split files
+# 4. test on swedish set
 
 
 ## preliminary implemetation of svector. To be improved ##
@@ -183,18 +187,29 @@ class CustVector(object):
 
     @method_block
     def pop(self, index=None):
+        # TODO: change to if_then()
         if index is None:
             i = self.end_ptr + 0
-            print_ln("before %s", self.end_ptr)
             self.end_ptr.write(self.end_ptr - 1)
-            print_ln("after %s", self.end_ptr)
         else:
             i = index
 
-        print_ln("xx %s", i)
         element = self.s_vector[i]
         self.s_vector[i] = NULL
         return element
+
+
+    @method_block
+    def get_element(self, index):
+        # TODO: checge this to use of [] operator
+        element =  self.s_vector[index]
+        return element
+
+    @method_block
+    def set_element(self, index, element):
+        # TODO: change this to [] operator
+        self.s_vector[index] = element
+        print_ln("element %s at %s changed!", element.reveal(), index)
 
     @method_block
     def push_back(self, element):
@@ -247,9 +262,9 @@ def get_external_private_array(cust_vector, channel, player):
     close_channel(channel)
 
 x = CustVector()
-
 get_external_private_array(x, 1005, 1)
 
+## use this for testing CustVector
 x.show(20)
 print_ln("----")
 length = x.length()
@@ -258,21 +273,12 @@ print_ln("length: %s", length.reveal())
 print_ln("elemnt: %s", element.reveal())
 print_ln("=============")
 
-
-el1 = x.pop(2)
-el2 = x.pop(8)
-el3 = x.pop()
-el4 = x.pop()
 x.show(20)
 print_ln("----")
 length = x.length()
 element = x.back()
 print_ln("length: %s", length.reveal())
 print_ln("elemnt: %s", element.reveal())
-print_ln("elemnt1: %s", el1.reveal())
-print_ln("elemnt2: %s", el2.reveal())
-print_ln("elemnt3: %s", el3.reveal())
-print_ln("elemnt4: %s", el4.reveal())
 print_ln("=============")
 
 
@@ -377,15 +383,95 @@ def split_up(data, split):
     print_ln("%s", type(split))
 
     # calculate lengths of train and test arrays
-    train_length = sfloat(data_length) * sfloat(split)
-    train_length = mpc_math.floor_fx(sfix(train_length)) + 1
-    test_length = data_length - train_length
-    print_ln("==: %s", train_length.reveal())
-    print_ln("==: %s", test_length.reveal())
+    train_target_length = sfloat(data_length) * sfloat(split)
+    train_target_length = mpc_math.floor_fx(sfix(train_target_length)) + 1
+    test_target_length = data_length - train_target_length
+    print_ln("==: %s", train_target_length.reveal())
+    print_ln("==: %s", test_target_length.reveal())
 
-    i = MemValue(sint(0))
+    train_target_length_sint = floatingpoint.Trunc(train_target_length.v, train_target_length.k - train_target_length.f, train_target_length.f, train_target_length.kappa)
+    A = sint.Array(1)
+    A[0] = sint(train_target_length_sint)
 
-    #print_ln("==: %s", data[4].reveal())
+    print_ln("------------------------")
+    data.show(20)
+    print_ln("------------------------")
+
+
+    @do_while
+    def _():
+        index = MemValue(sint.get_random_int(MAX_ARRAY_LENGTH_NBIT))
+        condition = MemValue(1)
+        count = MemValue(0)
+        element = MemValue(cint(NULL))
+        # loop until random number within data_length found and no NULL element
+        # at that index
+        @do_while
+        def _():
+            if_then(index.reveal() < data_length.reveal())
+            print_ln("index in 1 %s", index.reveal())
+            # TODO make comparison private
+            element.write(data.get_element(index.reveal()).reveal())
+            if_then(element != cint(NULL))
+            # print_ln("index in 2 %s", index.reveal())
+            ind = index.reveal()
+            data.set_element(ind, NULL)
+            condition.write(0)
+            else_then()
+            count.write(count + 1)
+            index.write(sint.get_random_int(MAX_ARRAY_LENGTH_NBIT))
+            end_if()
+
+            else_then()
+            # print_ln("index in 3 %s", index.reveal())
+            count.write(count + 1)
+            index.write(sint.get_random_int(MAX_ARRAY_LENGTH_NBIT))
+            end_if()
+
+            return condition > 0
+
+        print_ln("count %s", count)
+        print_ln("element %s", element)
+        print_ln("index out %s", index.reveal())
+        train.push_back(element)
+        print_ln("train length %s", train.length().reveal())
+        print_ln("train traget length %s", A[0].reveal())
+
+        delta_check = A[0].reveal() - train.length().reveal()
+        print_ln("delta_check %s", delta_check)
+
+        #yo_1 = MemValue(train.length().reveal())
+        # yo_1 = train.length().reveal()
+        # yo_2 = train_target_length_mem
+        # print_ln("type1 %s", type(yo_1))
+        # print_ln("type1 %s", type(yo_2))
+        # delta_check = (yo_2 - yo_1)
+        # print_ln("type2 %s", type(delta_check))
+        # print_ln("delta %s", delta_check)
+
+        return delta_check > 0
+
+    print_ln("------------------------")
+    train.show(20)
+    print_ln("------------------------")
+
+    print_ln("------------------------")
+    data.show(20)
+    print_ln("------------------------")
+
+
+    # now loop over data vector to assign all
+    @for_range(data_length.reveal())
+    def _(i):
+        # shouldnt htis also work with just the i, not cint(i)
+        element = data.get_element(cint(i))
+        if_then(element.reveal() != NULL)
+        test.push_back(element)
+        end_if()
+
+    print_ln("------------------------")
+    test.show(20)
+    print_ln("------------------------")
 
 
 
