@@ -1,59 +1,58 @@
 # First verison of a simple linear regression algorithm in MAMBA, the
-# MPC language of the SCALE-MAMBA library
+# MPC language of the SCALE-MAMBA library.
+#
 # The algorithm is an adapted verison of the one to be found here:
 # https://machinelearningmastery.com/implement-simple-linear-regression-scratch-python/
 
 # Author: Florian Apfelbeck, July, 2018
 
-# TODO:
-# - Enable external input of sint arrays
-# - implement ability to split arrays
-# - commment code
-# - check if NULL is implemented in a good way / if thats best practice
-# - split in seperate files
-# - Ensure correct function of code and testing
-# (do not use arrays but MemValue)
-# - improve multiple additions to same value, e.g., in sum function
-# implement multidimenitonal CustVector (to have x and y values in one vector)
-# - create README elaborating how to run this with documentation of changes in
-# SCALE-MAMBA source code (files IO.h, Player.cpp and new Input_OUtput_* files)
-# - consider implementing possibility for external input of sfloats into the
-# SCALE-MAMBA library
+## Next # TODO:
+# - change tabs to spaces
+# - check if NULL is good choice
+# - undertsnd why split function makes rmse bad/ fix split function (same indexes, dont loose x<->y connection)
+# - test on swedish set
 
 from Compiler import mpc_math, floatingpoint
 from random import seed, randrange
 
-sfloat.vlen = 15 # Length of mantissa in bits
-sfloat.plen = 10 # Length of exponent in bits
-sfloat.kappa = 4 # Statistical security parameter for floats
-
+# Length of mantissa in bits
+sfloat.vlen = 15
+# Length of exponent in bits
+sfloat.plen = 10
+# Statistical security parameter for floats
+sfloat.kappa = 4
+# NULL choosen here as -123456789. Be careful and change if your dataset
+# contains this number
 NULL = -123456789
 
+# Set MAX_ARRAY_LENGTH at least to the maximum length of your data input. Then
+# adapt the bitsize of this number.  The bitsize is required for the random
+# function, which only takes Python native int, which therefore has to be preset.
 MAX_ARRAY_LENGTH = 10000
 MAX_ARRAY_LENGTH_NBIT = 14
 
-
-## Next # TODO:
-# 1. undertsnd why split function makes rmse bad/ fix split function (same indexes, dont loose x<->y connection) 
-# 2. Comments
-# 3. split files
-# 4. test on swedish set
-
-
-## preliminary implemetation of svector. To be improved ##
-# TODO: implement indexing
-# TODO: use i instead of self.end_ptr all the time
+### PART 1: BASICS ###
+# Definitions of class to support functions later.
+###
 class CustVector(object):
+    """
+        This is a prelimiary version of a customized array so it can be
+        addressed like a vector, e.g., using push_back(), pop() and length().
+        This makes handling of the data, especially when reading in and
+        splitting up, easier.
 
+        Since the lengths of arrays in .mpc fines have to be predefined
+        before compilation, check if MAX_ARRAY_LENGTH is long enough for dataset.
+        Implementation for sint.
+    """
     def __init__(self):
         self.s_vector = sint.Array(MAX_ARRAY_LENGTH)
         self.end_ptr = MemValue(-1)
         self.s_vector[0] = NULL
-        # self.i = MemValue(NULL)
 
+    # TODO: change to if_then()
     @method_block
     def pop(self, index=None):
-        # TODO: change to if_then()
         if index is None:
             i = self.end_ptr + 0
             self.end_ptr.write(self.end_ptr - 1)
@@ -65,16 +64,17 @@ class CustVector(object):
         return element
 
 
+    # TODO: checge this to use of [] operator
     @method_block
     def get_element(self, index):
-        # TODO: checge this to use of [] operator
         element =  self.s_vector[index]
         return element
 
+    # TODO: change this to [] operator
     @method_block
     def set_element(self, index, element):
-        # TODO: change this to [] operator
         self.s_vector[index] = element
+        # For debugging:
         # print_ln("element %s at %s changed!", element.reveal(), index)
 
     @method_block
@@ -92,19 +92,56 @@ class CustVector(object):
         end_if()
         return result
 
+    # TODO: check if makes sense to protect length of vector since it has to be
+    # revealed for the for loops anyway
     @method_block
     def length(self):
         return sint(self.end_ptr + 1)
 
-    # show the first x elements (length) of the vector
+    # Shows the first x elements of the vector.
     @method_block
-    def show(self, length):
-        @for_range(length)
+    def show(self, no_elements):
+        @for_range(no_elements)
         def _(i):
             print_ln("%s", self.s_vector[i].reveal())
 
-## function to read in external private array ##
+def test_CustVector(vector):
+    """
+        Function to test the new class CustVector and the input functionality.
+    """
+    get_external_private_array(vector, 1005, 1)
+    vector.show(20)
+    print_ln("-------------")
+    length = vector.length()
+    element = vector.back()
+    print_ln("length: %s", length.reveal())
+    print_ln("element: %s", element.reveal())
+    print_ln("=============")
+    #
+    # implement your tests here
+
+    #
+    #
+    vector.show(20)
+    print_ln("-------------")
+    length = vector.length()
+    element = vector.back()
+    print_ln("length: %s", length.reveal())
+    print_ln("element: %s", element.reveal())
+    print_ln("=============")
+
+###
+### END OF PART 1 ###
+
+### PART 2: DATA INPUT AND PREPARATION ###
+# Functions related to read in data and preparation.
+###
 def get_external_private_array(cust_vector, channel, player):
+    """
+        Function to read external private array from file.  Change in some of the
+        original src/Input_Output/-Files of SCALE_MAMBA required.  For further
+        information see SCALE-MAMBA documentation.
+    """
     open_channel(channel)
     condition = MemValue(cint(1))
     i = MemValue(cint(0))
@@ -112,7 +149,6 @@ def get_external_private_array(cust_vector, channel, player):
     @do_while
     def _():
         input = sint.get_private_input_from(player)
-        # print_ln("input reveal %s", input.reveal())
 
         if_then(input.reveal() != NULL)
         cust_vector.push_back(input)
@@ -123,63 +159,102 @@ def get_external_private_array(cust_vector, channel, player):
         end_if()
 
         return condition > 0
-
     close_channel(channel)
 
+def split_up(data, split):
+    """
+        Function to split up dataset into training and test sets.
 
-#############################
-# x_tr = CustVector()
-# x_te = CustVector()
-# y_tr = CustVector()
-# y_te = CustVector()
+        Length of x_train and x_test (considering split) can not be taken into
+        account at initialization, since array lengths have to be known at
+        compile time.
+    """
+    train = CustVector()
+    test = CustVector()
+    data_length = data.length()
 
-# x_tr.push_back(5)
-# x_tr.push_back(20)
-# x_tr.push_back(3)
-# x_tr.push_back(11)
-# x_tr.push_back(6)
-# x_tr.push_back(12)
-# x_tr.push_back(18)
-# x_tr.push_back(13)
-# x_tr.push_back(14)
-# x_tr.push_back(19)
-# x_tr.push_back(10)
-# x_tr.push_back(7)
-# x_tr.push_back(2)
-# x_tr.push_back(9)
-#
-# x_te.push_back(1)
-# x_te.push_back(4)
-# x_te.push_back(8)
-# x_te.push_back(15)
-# x_te.push_back(16)
-# x_te.push_back(17)
-#
-# y_tr.push_back(17)
-# y_tr.push_back(4)
-# y_tr.push_back(78)
-# y_tr.push_back(45)
-# y_tr.push_back(64)
-# y_tr.push_back(53)
-# y_tr.push_back(2)
-# y_tr.push_back(42)
-# y_tr.push_back(41)
-# y_tr.push_back(44)
-# y_tr.push_back(9)
-# y_tr.push_back(23)
-# y_tr.push_back(32)
-# y_tr.push_back(14)
-#
-# y_te.push_back(66)
-# y_te.push_back(12)
-# y_te.push_back(14)
-# y_te.push_back(94)
-# y_te.push_back(52)
-# y_te.push_back(18)
-# #################################
-# full swedish data set
-def create__hardcoded_split_data(x_tr, x_te, y_tr, y_te):
+    # Calculate target lengths of train and test vectors
+    train_target_length = sfloat(data_length) * sfloat(split)
+    train_target_length = mpc_math.floor_fx(sfix(train_target_length)) + 1
+    test_target_length = data_length - train_target_length
 
+    # Cast train_target_length to sint(), which is required in order to work
+    # with the computation of the condition delta_check of the first while-loop.
+    train_target_length_sint = floatingpoint.Trunc(
+        train_target_length.v, train_target_length.k - train_target_length.f,
+        train_target_length.f, train_target_length.kappa)
+    A = sint.Array(1)
+    print_ln("bef %", type(train_target_length_sint))
+    print_ln("aft %", type(sint(train_target_length_sint)))
+    A[0] = sint(train_target_length_sint)
+
+    # Loop to add elements of data to train set. Elements are choosen randomly.
+    # Way of getting random index to pick the elements should be improved,
+    # if possible.  For now, since get_random_int() only takes python native int
+    # as input, a second while loop is required.  It looks for a random int in
+    # the range of MAX_ARRAY_LENGTH until this random number is within the range
+    # of the data set.  This is very inefficient and slow.  A posisble solution
+    # might involve changing the SCALE-MAMBA source code and might be
+    # implemented later.
+    @do_while
+    def _():
+        index = MemValue(sint.get_random_int(MAX_ARRAY_LENGTH_NBIT))
+        condition = MemValue(1)
+        count = MemValue(0)
+        element = MemValue(cint(NULL))
+
+        # Loop until random number within range of data_length found and
+        # the element at this place has not been assigned to the train set, yet.
+        @do_while
+        def _():
+            # if: 1st if-block
+            if_then(index.reveal() < data_length.reveal())
+            # TODO make comparison private
+            element.write(data.get_element(index.reveal()).reveal())
+
+            # if: 2nd if-block
+            if_then(element != cint(NULL))
+            ind = index.reveal()
+            data.set_element(ind, NULL)
+            condition.write(0)
+
+            # elseif: 2nd if-block
+            else_then()
+            count.write(count + 1)
+            index.write(sint.get_random_int(MAX_ARRAY_LENGTH_NBIT))
+            # end: 2nd if-block
+            end_if()
+
+            # elseif: 1st if-block
+            else_then()
+            count.write(count + 1)
+            index.write(sint.get_random_int(MAX_ARRAY_LENGTH_NBIT))
+            # end: 1st if-block
+            end_if()
+            return condition > 0
+
+        train.push_back(element)
+        delta_check = A[0].reveal() - train.length().reveal()
+        return delta_check > 0
+
+    # Loop over data vector to assign all left elements in data to test vector.
+    @for_range(data_length.reveal())
+    def _(i):
+        element = data.get_element(cint(i))
+        if_then(element.reveal() != NULL)
+        test.push_back(element)
+        end_if()
+
+    return train, test
+
+def use_pre_split_data(x_tr, x_te, y_tr, y_te):
+    """
+        Hardcoded split dataset to ensure same randomization in order to compare
+        performance with original algorithm implemented in python and for testing.
+        Swedish insurance dataset with split of 0.7.
+    """
+
+    # X training data
     x_tr.push_back(45)
     x_tr.push_back(12)
     x_tr.push_back(30)
@@ -226,6 +301,7 @@ def create__hardcoded_split_data(x_tr, x_te, y_tr, y_te):
     x_tr.push_back(8)
     x_tr.push_back(8)
 
+    # Y training data
     y_tr.push_back(214)
     y_tr.push_back(58)
     y_tr.push_back(195)
@@ -272,6 +348,7 @@ def create__hardcoded_split_data(x_tr, x_te, y_tr, y_te):
     y_tr.push_back(76)
     y_tr.push_back(56)
 
+    # X test data
     x_te.push_back(48)
     x_te.push_back(23)
     x_te.push_back(7)
@@ -291,6 +368,7 @@ def create__hardcoded_split_data(x_tr, x_te, y_tr, y_te):
     x_te.push_back(13)
     x_te.push_back(14)
 
+    # X_test data
     y_te.push_back(248)
     y_te.push_back(40)
     y_te.push_back(49)
@@ -309,133 +387,38 @@ def create__hardcoded_split_data(x_tr, x_te, y_tr, y_te):
     y_te.push_back(93)
     y_te.push_back(32)
     y_te.push_back(96)
-#####################################
 
-## use this for testing CustVector ##
-def test_Custvector(vector):
-    get_external_private_array(vector, 1005, 1)
-    vector.show(20)
-    print_ln("----")
-    length = vector.length()
-    element = vector.back()
-    print_ln("length: %s", length.reveal())
-    print_ln("elemnt: %s", element.reveal())
-    print_ln("=============")
+#
+### END OF PART 2 ###
 
-    vector.show(20)
-    print_ln("----")
-    length = vector.length()
-    element = vector.back()
-    print_ln("length: %s", length.reveal())
-    print_ln("elemnt: %s", element.reveal())
-    print_ln("=============")
+### PART 3: Computation of RMSE ###
+# Definitions of funtions for the computation of the rmse start here.
+# Use of arrays instead of MemValue in some cases because MemValue() can not
+# contain sfloat.  For debugging and evaluating performance in comparison to the
+# python implemenation, some print statements are kept.
+###
 
-## split data set into train and test set ##
-def split_up(data, split):
-    # initialize x_train and x_test (array length has to be known at compile time,
-    # therefore, initialization with taking split into acocunt not possible)
-    train = CustVector()
-    test = CustVector()
-    data_length = data.length()
-
-    # calculate lengths of train and test arrays
-    train_target_length = sfloat(data_length) * sfloat(split)
-    train_target_length = mpc_math.floor_fx(sfix(train_target_length)) + 1
-    test_target_length = data_length - train_target_length
-
-    # cast train_target_length to sint()
-    train_target_length_sint = floatingpoint.Trunc(train_target_length.v, train_target_length.k - train_target_length.f, train_target_length.f, train_target_length.kappa)
-    A = sint.Array(1)
-    A[0] = sint(train_target_length_sint)
-
-    @do_while
-    def _():
-        index = MemValue(sint.get_random_int(MAX_ARRAY_LENGTH_NBIT))
-        condition = MemValue(1)
-        count = MemValue(0)
-        element = MemValue(cint(NULL))
-        # loop until random number within data_length found and no NULL element
-        # at that index
-        @do_while
-        def _():
-            # if 1
-            if_then(index.reveal() < data_length.reveal())
-            # TODO make comparison private
-            element.write(data.get_element(index.reveal()).reveal())
-
-            # if 2
-            if_then(element != cint(NULL))
-            ind = index.reveal()
-            data.set_element(ind, NULL)
-            condition.write(0)
-
-            # elseif 2
-            else_then()
-            count.write(count + 1)
-            index.write(sint.get_random_int(MAX_ARRAY_LENGTH_NBIT))
-            # close if 2
-            end_if()
-
-            # elseif 1
-            else_then()
-            count.write(count + 1)
-            index.write(sint.get_random_int(MAX_ARRAY_LENGTH_NBIT))
-            # close if 1
-            end_if()
-
-            return condition > 0
-
-        train.push_back(element)
-        # print_ln("element %s", element)
-        # print_ln("index out %s", index.reveal())
-        # print_ln("train length %s", train.length().reveal())
-        # print_ln("train traget length %s", A[0].reveal())
-
-        delta_check = A[0].reveal() - train.length().reveal()
-        # print_ln("delta_check %s", delta_check)
-
-        return delta_check > 0
-
-    # print_ln("------------------------")
-    # train.show(20)
-    # print_ln("------------------------")
-    #
-    # print_ln("------------------------")
-    # data.show(20)
-    # print_ln("------------------------")
-
-    # loop over data vector to assign all left in data to test
-    @for_range(data_length.reveal())
-    def _(i):
-        element = data.get_element(cint(i))
-        if_then(element.reveal() != NULL)
-        test.push_back(element)
-        end_if()
-
-    # print_ln("------------------------")
-    # test.show(20)
-    # print_ln("------------------------")
-
-    return train, test
-
-
-### simple linear regression ###
-## sum function ##
 def sum(vector):
+    """
+        Calculate the sum of the elements in a vector.
+    """
     result_array = sfloat.Array(1)
     result_array[0] = 0.0
-    @while_do(lambda a: a < vector.length().reveal(), 0)
+    @for_range(vector.length().reveal())
     def _(i):
         result_array[0] = result_array[0] + sfloat(vector.get_element(i))
-        return i+1
     return result_array[0]
 
-## mean function ##
 def mean(vector):
+    """
+        Calculate the mean of the elements in a vector.
+    """
     return sum(vector) / sfloat(vector.length())
 
-## rmse_metric ##
 def rmse_metric(actual, predicted_array):
+    """
+        Calculate root mean squared error.
+    """
     sum_err = sfloat.Array(1)
     sum_err[0] = 0.0
     rmse = sfloat(0.0)
@@ -457,126 +440,114 @@ def rmse_metric(actual, predicted_array):
     rmse = mpc_math.sqrt_simplified_fx(sfix(mean_err))
     return rmse
 
-## covariance ##
 def covariance(x_vector, x_mean, y_vector, y_mean):
+    """
+        Clalculate covariance between x and y.
+    """
     covar = sfloat.Array(1)
     covar[0] = 0.0
     @for_range(x_vector.length().reveal())
     def _(i):
-        covar[0] = covar[0] + (sfloat(x_vector.get_element(i)) - x_mean) * (sfloat(y_vector.get_element(i)) - y_mean)
+        # TODO change to +=
+        covar[0] = covar[0] + ((sfloat(x_vector.get_element(i)) - x_mean)
+            * (sfloat(y_vector.get_element(i)) - y_mean))
     return covar[0]
 
-## variance ##
 def variance(vector, mean):
+    """
+        Calculate variance between elements of a vector.
+    """
     var = sfloat.Array(1)
     var[0] = 0.0
     @for_range(vector.length().reveal())
     def _(i):
+        # TODO change to +=
         var[0] = var[0] + (sfloat(vector.get_element(i)) - mean) ** 2
     return var[0]
 
-## coefficients ##
 def coefficients(x_vector, y_vector):
+    """
+        Calculate coefficients b0 and b1 for the simple_linear_regression algorithm
+    """
     x_mean = mean(x_vector)
     y_mean = mean(y_vector)
-    b1 = covariance(x_vector, x_mean, y_vector, y_mean) / variance(x_vector, x_mean)
-    b0 = y_mean - b1 * x_mean
+    b1 = (covariance(x_vector, x_mean, y_vector, y_mean)
+        / variance(x_vector, x_mean))
+    b0 = y_mean - b1*x_mean
     return b0, b1
 
-## slr algorithm ##
 def simple_linear_regression(x_train, x_test, y_train):
+    """
+        Simple linear regression algorithm
+    """
     x_test_length = x_test.length().reveal()
     predictions = sfloat.Array(MAX_ARRAY_LENGTH)
     b0, b1 = coefficients(x_train, y_train)
     @for_range(x_test_length)
     def _(i):
-        predictions[i] = b0 + b1 * sfloat(x_test.get_element(i))
+        predictions[i] = b0 + b1*sfloat(x_test.get_element(i))
     return predictions
 
-## evaluate ##
 def evaluate(x_train, x_test, y_train, y_test):
+    """
+        Evaluate data and receive root mean square error
+    """
     predicted = simple_linear_regression(x_train, x_test, y_train)
     rmse = rmse_metric(y_test, predicted)
-    # print_ln("pred ty %s", type(predicted))
     return rmse
 
-###########################
-# x = CustVector()
-# get_external_private_array(x, 2005, 1)
-# # print_ln("+ this is x ++++++++++++++++++++++")
-# # x.show(20)
-# # print_ln("+++++++++++++++++++++++")
-#
-# y = CustVector()
-# get_external_private_array(y, 3005, 1)
-# # print_ln("+ this is y +++++++++++++++++++++")
-# # y.show(20)
-# # print_ln("+++++++++++++++++++++++")
-#
-# split = 0.7
-# x_train, x_test = split_up(x, split)
-# y_train, y_test = split_up(y, split)
 
-# print_ln("- x_train -----------------------")
-# x_train.show(20)
-# print_ln("------------------------")
+def load_data_from_file(x_train, x_test, y_train, y_test, split):
+    """
+        Load data from an input file. Choose channels depending on your setting
+        in src/Input_Output/Input_Output_<user_defined>.cpp file
+    """
+    # Load external private data separated into x and y
+    x = CustVector()
+    get_external_private_array(x, 2005, 1)
+
+    # Uncomment to check input
+    # print_ln("++++++ this is x: +++++++")
+    # x.show(20)
+    # print_ln("+++++++++++++++++++++++++")
+
+    y = CustVector()
+    get_external_private_array(y, 3005, 1)
+
+    # Uncomment to check input
+    # print_ln("++++++ this is y: +++++++")
+    # y.show(20)
+    # print_ln("+++++++++++++++++++++++++")
+
+    x_train, x_test = split_up(x, split)
+    y_train, y_test = split_up(y, split)
+
 #
-# print_ln("- x_test -----------------------")
-# x_test.show(20)
-# print_ln("------------------------")
-#
-# print_ln("- y_train -----------------------")
-# y_train.show(20)
-# print_ln("------------------------")
-#
-# print_ln("- y_test -----------------------")
-# y_test.show(20)
-# print_ln("------------------------")
-# # #######################################
+### END OF PART 3 ###
 
-#################################################
+def main():
+    """
+    Main function to run program.
+    """
+    # Initialize data vectors.
+    x_train = CustVector()
+    x_test = CustVector()
+    y_train = CustVector()
+    y_test = CustVector()
 
-# x_tr = CustVector()
-# x_te = CustVector()
-# y_tr = CustVector()
-# y_te = CustVector()
-#
-# @for_range(10)
-# def _(i):
-#     x_tr.push_back(i)
-#     y_tr.push_back(i)
-#
-# @for_range(3)
-# def _(i):
-#     x_te.push_back(i)
-#     y_te.push_back(i)
+    # Set split
+    split = 0.7
 
-# vector = CustVector()
-# test_Custvector(vector)
-######################
-# sum_error 7070.603827319998
-# mean error 1178.4339712199996
-# RMSE: 34.328
+    # Pick / uncomment which data input is desired:
+    # 1. Regular loading of data set.
+    # load_data_from_file(x_train, x_test, y_trian, y_test, split)
 
-x_tr = CustVector()
-x_te = CustVector()
-y_tr = CustVector()
-y_te = CustVector()
+    # 2. Using preset data for testing & comparison with implemenation in python.
+    use_pre_split_data(x_train, x_test, y_train, y_test)
 
-create__hardcoded_split_data(x_tr, x_te, y_tr, y_te)
+    rmse = evaluate(x_train, x_test, y_train, y_test)
+    print_ln("==========================")
+    print_ln("RMSE: %s", rmse.reveal())
+    print_ln("==========================")
 
-# rmse = evaluate(x_train, x_test, y_train, y_test)
-rmse = evaluate(x_tr, x_te, y_tr, y_te)
-print_ln("==========================")
-print_ln("RMSE: %s", rmse.reveal())
-# print_ln("==========================")
-
-# # get sqrt rights
-# div = sfloat(7025.24) / sfloat(6)
-# print_ln("div %s", div.reveal())
-#
-# mean_err = sfloat(1319.763547282937452819363)
-# rmse = mpc_math.sqrt_simplified_fx(sfix(mean_err))
-# print_ln("+++++++++++++++++++")
-# print_ln("test rmse: %s", rmse.reveal())
-# print_ln("+++++++++++++++++++")
+main()
