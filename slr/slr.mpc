@@ -34,6 +34,7 @@ MAX_ARRAY_LENGTH_NBIT = 14
 
 
 ## Next # TODO:
+# 1. undertsnd why split function makes rmse bad/ fix split function (same indexes, dont loose x<->y connection) 
 # 2. Comments
 # 3. split files
 # 4. test on swedish set
@@ -111,7 +112,7 @@ def get_external_private_array(cust_vector, channel, player):
     @do_while
     def _():
         input = sint.get_private_input_from(player)
-        print_ln("input reveal %s", input.reveal())
+        # print_ln("input reveal %s", input.reveal())
 
         if_then(input.reveal() != NULL)
         cust_vector.push_back(input)
@@ -126,12 +127,12 @@ def get_external_private_array(cust_vector, channel, player):
     close_channel(channel)
 
 
-# #############################
+#############################
 # x_tr = CustVector()
 # x_te = CustVector()
 # y_tr = CustVector()
 # y_te = CustVector()
-#
+
 # x_tr.push_back(5)
 # x_tr.push_back(20)
 # x_tr.push_back(3)
@@ -176,7 +177,139 @@ def get_external_private_array(cust_vector, channel, player):
 # y_te.push_back(52)
 # y_te.push_back(18)
 # #################################
+# full swedish data set
+def create__hardcoded_split_data(x_tr, x_te, y_tr, y_te):
 
+    x_tr.push_back(45)
+    x_tr.push_back(12)
+    x_tr.push_back(30)
+    x_tr.push_back(15)
+    x_tr.push_back(17)
+    x_tr.push_back(40)
+    x_tr.push_back(3)
+    x_tr.push_back(10)
+    x_tr.push_back(11)
+    x_tr.push_back(24)
+    x_tr.push_back(6)
+    x_tr.push_back(61)
+    x_tr.push_back(3)
+    x_tr.push_back(7)
+    x_tr.push_back(24)
+    x_tr.push_back(14)
+    x_tr.push_back(41)
+    x_tr.push_back(19)
+    x_tr.push_back(5)
+    x_tr.push_back(13)
+    x_tr.push_back(9)
+    x_tr.push_back(108)
+    x_tr.push_back(55)
+    x_tr.push_back(7)
+    x_tr.push_back(9)
+    x_tr.push_back(26)
+    x_tr.push_back(11)
+    x_tr.push_back(22)
+    x_tr.push_back(124)
+    x_tr.push_back(57)
+    x_tr.push_back(23)
+    x_tr.push_back(13)
+    x_tr.push_back(53)
+    x_tr.push_back(31)
+    x_tr.push_back(20)
+    x_tr.push_back(27)
+    x_tr.push_back(23)
+    x_tr.push_back(25)
+    x_tr.push_back(29)
+    x_tr.push_back(5)
+    x_tr.push_back(41)
+    x_tr.push_back(3)
+    x_tr.push_back(37)
+    x_tr.push_back(8)
+    x_tr.push_back(8)
+
+    y_tr.push_back(214)
+    y_tr.push_back(58)
+    y_tr.push_back(195)
+    y_tr.push_back(32)
+    y_tr.push_back(142)
+    y_tr.push_back(119)
+    y_tr.push_back(4)
+    y_tr.push_back(65)
+    y_tr.push_back(57)
+    y_tr.push_back(138)
+    y_tr.push_back(15)
+    y_tr.push_back(218)
+    y_tr.push_back(40)
+    y_tr.push_back(28)
+    y_tr.push_back(135)
+    y_tr.push_back(78)
+    y_tr.push_back(181)
+    y_tr.push_back(46)
+    y_tr.push_back(40)
+    y_tr.push_back(90)
+    y_tr.push_back(87)
+    y_tr.push_back(393)
+    y_tr.push_back(163)
+    y_tr.push_back(78)
+    y_tr.push_back(52)
+    y_tr.push_back(188)
+    y_tr.push_back(24)
+    y_tr.push_back(162)
+    y_tr.push_back(422)
+    y_tr.push_back(171)
+    y_tr.push_back(57)
+    y_tr.push_back(16)
+    y_tr.push_back(245)
+    y_tr.push_back(210)
+    y_tr.push_back(98)
+    y_tr.push_back(93)
+    y_tr.push_back(113)
+    y_tr.push_back(69)
+    y_tr.push_back(133)
+    y_tr.push_back(21)
+    y_tr.push_back(73)
+    y_tr.push_back(13)
+    y_tr.push_back(153)
+    y_tr.push_back(76)
+    y_tr.push_back(56)
+
+    x_te.push_back(48)
+    x_te.push_back(23)
+    x_te.push_back(7)
+    x_te.push_back(2)
+    x_te.push_back(6)
+    x_te.push_back(6)
+    x_te.push_back(9)
+    x_te.push_back(29)
+    x_te.push_back(4)
+    x_te.push_back(4)
+    x_te.push_back(0)
+    x_te.push_back(4)
+    x_te.push_back(16)
+    x_te.push_back(60)
+    x_te.push_back(11)
+    x_te.push_back(13)
+    x_te.push_back(13)
+    x_te.push_back(14)
+
+    y_te.push_back(248)
+    y_te.push_back(40)
+    y_te.push_back(49)
+    y_te.push_back(7)
+    y_te.push_back(51)
+    y_te.push_back(15)
+    y_te.push_back(49)
+    y_te.push_back(104)
+    y_te.push_back(12)
+    y_te.push_back(38)
+    y_te.push_back(0)
+    y_te.push_back(13)
+    y_te.push_back(60)
+    y_te.push_back(202)
+    y_te.push_back(21)
+    y_te.push_back(93)
+    y_te.push_back(32)
+    y_te.push_back(96)
+#####################################
 
 ## use this for testing CustVector ##
 def test_Custvector(vector):
@@ -255,11 +388,11 @@ def split_up(data, split):
         train.push_back(element)
         # print_ln("element %s", element)
         # print_ln("index out %s", index.reveal())
-        print_ln("train length %s", train.length().reveal())
-        print_ln("train traget length %s", A[0].reveal())
+        # print_ln("train length %s", train.length().reveal())
+        # print_ln("train traget length %s", A[0].reveal())
 
         delta_check = A[0].reveal() - train.length().reveal()
-        print_ln("delta_check %s", delta_check)
+        # print_ln("delta_check %s", delta_check)
 
         return delta_check > 0
 
@@ -368,38 +501,38 @@ def evaluate(x_train, x_test, y_train, y_test):
     return rmse
 
 ###########################
-x = CustVector()
-get_external_private_array(x, 2005, 1)
-print_ln("+ this is x ++++++++++++++++++++++")
-x.show(20)
-print_ln("+++++++++++++++++++++++")
+# x = CustVector()
+# get_external_private_array(x, 2005, 1)
+# # print_ln("+ this is x ++++++++++++++++++++++")
+# # x.show(20)
+# # print_ln("+++++++++++++++++++++++")
+#
+# y = CustVector()
+# get_external_private_array(y, 3005, 1)
+# # print_ln("+ this is y +++++++++++++++++++++")
+# # y.show(20)
+# # print_ln("+++++++++++++++++++++++")
+#
+# split = 0.7
+# x_train, x_test = split_up(x, split)
+# y_train, y_test = split_up(y, split)
 
-y = CustVector()
-get_external_private_array(y, 3005, 1)
-print_ln("+ this is y +++++++++++++++++++++")
-y.show(20)
-print_ln("+++++++++++++++++++++++")
-
-split = 0.7
-x_train, x_test = split_up(x, split)
-y_train, y_test = split_up(y, split)
-
-print_ln("- x_train -----------------------")
-x_train.show(20)
-print_ln("------------------------")
-
-print_ln("- x_test -----------------------")
-x_test.show(20)
-print_ln("------------------------")
-
-print_ln("- y_train -----------------------")
-y_train.show(20)
-print_ln("------------------------")
-
-print_ln("- y_test -----------------------")
-y_test.show(20)
-print_ln("------------------------")
-# #######################################
+# print_ln("- x_train -----------------------")
+# x_train.show(20)
+# print_ln("------------------------")
+#
+# print_ln("- x_test -----------------------")
+# x_test.show(20)
+# print_ln("------------------------")
+#
+# print_ln("- y_train -----------------------")
+# y_train.show(20)
+# print_ln("------------------------")
+#
+# print_ln("- y_test -----------------------")
+# y_test.show(20)
+# print_ln("------------------------")
+# # #######################################
 
 #################################################
 
@@ -425,11 +558,18 @@ print_ln("------------------------")
 # mean error 1178.4339712199996
 # RMSE: 34.328
 
-rmse = evaluate(x_train, x_test, y_train, y_test)
-# rmse = evaluate(x_tr, x_te, y_tr, y_te)
+x_tr = CustVector()
+x_te = CustVector()
+y_tr = CustVector()
+y_te = CustVector()
+
+create__hardcoded_split_data(x_tr, x_te, y_tr, y_te)
+
+# rmse = evaluate(x_train, x_test, y_train, y_test)
+rmse = evaluate(x_tr, x_te, y_tr, y_te)
 print_ln("==========================")
 print_ln("RMSE: %s", rmse.reveal())
-print_ln("==========================")
+# print_ln("==========================")
 
 # # get sqrt rights
 # div = sfloat(7025.24) / sfloat(6)
