@@ -7,10 +7,9 @@
 # Author: Florian Apfelbeck, July, 2018
 
 ## Next # TODO:
-# - change tabs to spaces
-# - check if NULL is good choice
 # - undertsnd why split function makes rmse bad/ fix split function (same indexes, dont loose x<->y connection)
 # - test on swedish set
+# - test speed
 
 from Compiler import mpc_math, floatingpoint
 from random import seed, randrange
@@ -22,7 +21,8 @@ sfloat.plen = 10
 # Statistical security parameter for floats
 sfloat.kappa = 4
 # NULL choosen here as -123456789. Be careful and change if your dataset
-# contains this number
+# contains this number.  This is necessary since sint.Array() treats python
+# None like 0 (i.e., sint(None) is same as sint(0))
 NULL = -123456789
 
 # Set MAX_ARRAY_LENGTH at least to the maximum length of your data input. Then
@@ -150,7 +150,7 @@ def get_external_private_array(cust_vector, channel, player):
     def _():
         input = sint.get_private_input_from(player)
 
-        if_then(input.reveal() != NULL)
+        if_then((input != NULL).reveal())
         cust_vector.push_back(input)
         i.write(i + 1)
 
@@ -161,18 +161,29 @@ def get_external_private_array(cust_vector, channel, player):
         return condition > 0
     close_channel(channel)
 
-def split_up(data, split):
+def split_up(x_vector, y_vector, split):
     """
         Function to split up dataset into training and test sets.
 
-        Length of x_train and x_test (considering split) can not be taken into
+        Actual length of train and test (considering split) can not be taken into
         account at initialization, since array lengths have to be known at
         compile time.
     """
-    train = CustVector()
-    test = CustVector()
-    data_length = data.length()
+    x_train = CustVector()
+    y_train = CustVector()
+    x_test = CustVector()
+    y_test = CustVector()
+    data_length = x_vector.length()
+    y_length = y_vector.length()
 
+    if_then((data_length != y_vector.length()).reveal())
+    print_ln("X and Y data do not have the same length! Check your input!")
+    end_if()
+
+    print_ln("++++++input X++++++++")
+    x_vector.show(25)
+    print_ln("++++++input Y++++++++")
+    y_vector.show(25)
     # Calculate target lengths of train and test vectors
     train_target_length = sfloat(data_length) * sfloat(split)
     train_target_length = mpc_math.floor_fx(sfix(train_target_length)) + 1
@@ -183,10 +194,8 @@ def split_up(data, split):
     train_target_length_sint = floatingpoint.Trunc(
         train_target_length.v, train_target_length.k - train_target_length.f,
         train_target_length.f, train_target_length.kappa)
-    A = sint.Array(1)
-    print_ln("bef %", type(train_target_length_sint))
-    print_ln("aft %", type(sint(train_target_length_sint)))
-    A[0] = sint(train_target_length_sint)
+    train_target_length_sint_array = sint.Array(1)
+    train_target_length_sint_array[0] = train_target_length_sint
 
     # Loop to add elements of data to train set. Elements are choosen randomly.
     # Way of getting random index to pick the elements should be improved,
@@ -200,52 +209,72 @@ def split_up(data, split):
     def _():
         index = MemValue(sint.get_random_int(MAX_ARRAY_LENGTH_NBIT))
         condition = MemValue(1)
+        x_element = MemValue(sint(NULL))
+        y_element = MemValue(sint(NULL))
+
+        # Use count for debugging
         count = MemValue(0)
-        element = MemValue(cint(NULL))
 
         # Loop until random number within range of data_length found and
         # the element at this place has not been assigned to the train set, yet.
         @do_while
         def _():
             # if: 1st if-block
-            if_then(index.reveal() < data_length.reveal())
-            # TODO make comparison private
-            element.write(data.get_element(index.reveal()).reveal())
+            if_then((index < data_length).reveal())
+            # TODO: check for possibility to not have to reveal index here
+            x_element.write(x_vector.get_element(index.reveal()))
+            y_element.write(y_vector.get_element(index.reveal()))
 
             # if: 2nd if-block
-            if_then(element != cint(NULL))
+            # TODO could add another check on y_element for safety reasons later
+            if_then((x_element != NULL).reveal())
             ind = index.reveal()
-            data.set_element(ind, NULL)
+            x_vector.set_element(ind, NULL)
+            y_vector.set_element(ind, NULL)
             condition.write(0)
 
             # elseif: 2nd if-block
             else_then()
-            count.write(count + 1)
             index.write(sint.get_random_int(MAX_ARRAY_LENGTH_NBIT))
+            count.write(count + 1)
+
             # end: 2nd if-block
             end_if()
 
             # elseif: 1st if-block
             else_then()
-            count.write(count + 1)
             index.write(sint.get_random_int(MAX_ARRAY_LENGTH_NBIT))
+            count.write(count + 1)
+
             # end: 1st if-block
             end_if()
             return condition > 0
 
-        train.push_back(element)
-        delta_check = A[0].reveal() - train.length().reveal()
+
+        print_ln("count: %s", count)
+        print_ln("x_elem: %s", x_element.reveal())
+        print_ln("y_elem: %s", y_element.reveal())
+
+        x_train.push_back(x_element)
+        y_train.push_back(y_element)
+        delta_check = (train_target_length_sint_array[0]
+            - x_train.length()).reveal()
+        print_ln("delta_check: %s", delta_check)
         return delta_check > 0
 
     # Loop over data vector to assign all left elements in data to test vector.
     @for_range(data_length.reveal())
     def _(i):
-        element = data.get_element(cint(i))
-        if_then(element.reveal() != NULL)
-        test.push_back(element)
+        x_element = x_vector.get_element(cint(i))
+        y_element = y_vector.get_element(cint(i))
+        if_then((x_element != NULL).reveal())
+        if_then((y_element != NULL).reveal())
+        x_test.push_back(x_element)
+        y_test.push_back(y_element)
+        end_if()
         end_if()
 
-    return train, test
+    return x_train, x_test, y_train, y_test
 
 def use_pre_split_data(x_tr, x_te, y_tr, y_te):
     """
@@ -387,6 +416,139 @@ def use_pre_split_data(x_tr, x_te, y_tr, y_te):
     y_te.push_back(93)
     y_te.push_back(32)
     y_te.push_back(96)
+#####################
+def use_pre_split_data_2(x_tr, x_te, y_tr, y_te):
+
+    x_tr.push_back(14)
+    x_tr.push_back(4)
+    x_tr.push_back(13)
+    x_tr.push_back(9)
+    x_tr.push_back(45)
+    x_tr.push_back(5)
+    x_tr.push_back(13)
+    x_tr.push_back(41)
+    x_tr.push_back(6)
+    x_tr.push_back(3)
+    x_tr.push_back(12)
+    x_tr.push_back(41)
+    x_tr.push_back(19)
+    x_tr.push_back(9)
+    x_tr.push_back(13)
+    x_tr.push_back(5)
+    x_tr.push_back(57)
+    x_tr.push_back(25)
+    x_tr.push_back(16)
+    x_tr.push_back(13)
+    x_tr.push_back(29)
+    x_tr.push_back(8)
+    x_tr.push_back(15)
+    x_tr.push_back(20)
+    x_tr.push_back(53)
+    x_tr.push_back(108)
+    x_tr.push_back(31)
+    x_tr.push_back(23)
+    x_tr.push_back(4)
+    x_tr.push_back(2)
+    x_tr.push_back(8)
+    x_tr.push_back(124)
+    x_tr.push_back(6)
+    x_tr.push_back(7)
+    x_tr.push_back(0)
+    x_tr.push_back(23)
+    x_tr.push_back(11)
+    x_tr.push_back(55)
+    x_tr.push_back(3)
+    x_tr.push_back(40)
+    x_tr.push_back(22)
+    x_tr.push_back(27)
+    x_tr.push_back(10)
+    x_tr.push_back(6)
+    x_tr.push_back(17)
+
+    x_te.push_back(14)
+    x_te.push_back(48)
+    x_te.push_back(23)
+    x_te.push_back(7)
+    x_te.push_back(24)
+    x_te.push_back(3)
+    x_te.push_back(9)
+    x_te.push_back(29)
+    x_te.push_back(7)
+    x_te.push_back(11)
+    x_te.push_back(61)
+    x_te.push_back(4)
+    x_te.push_back(60)
+    x_te.push_back(37)
+    x_te.push_back(11)
+    x_te.push_back(30)
+    x_te.push_back(24)
+    x_te.push_back(26)
+
+    y_tr.push_back(14)
+    y_tr.push_back(4)
+    y_tr.push_back(13)
+    y_tr.push_back(9)
+    y_tr.push_back(45)
+    y_tr.push_back(5)
+    y_tr.push_back(13)
+    y_tr.push_back(41)
+    y_tr.push_back(6)
+    y_tr.push_back(3)
+    y_tr.push_back(12)
+    y_tr.push_back(41)
+    y_tr.push_back(19)
+    y_tr.push_back(9)
+    y_tr.push_back(13)
+    y_tr.push_back(5)
+    y_tr.push_back(57)
+    y_tr.push_back(25)
+    y_tr.push_back(16)
+    y_tr.push_back(13)
+    y_tr.push_back(29)
+    y_tr.push_back(8)
+    y_tr.push_back(15)
+    y_tr.push_back(20)
+    y_tr.push_back(53)
+    y_tr.push_back(108)
+    y_tr.push_back(31)
+    y_tr.push_back(23)
+    y_tr.push_back(4)
+    y_tr.push_back(2)
+    y_tr.push_back(8)
+    y_tr.push_back(124)
+    y_tr.push_back(6)
+    y_tr.push_back(7)
+    y_tr.push_back(0)
+    y_tr.push_back(23)
+    y_tr.push_back(11)
+    y_tr.push_back(55)
+    y_tr.push_back(3)
+    y_tr.push_back(40)
+    y_tr.push_back(22)
+    y_tr.push_back(27)
+    y_tr.push_back(10)
+    y_tr.push_back(6)
+    y_tr.push_back(17)
+
+    y_te.push_back(78)
+    y_te.push_back(248)
+    y_te.push_back(40)
+    y_te.push_back(49)
+    y_te.push_back(135)
+    y_te.push_back(4)
+    y_te.push_back(49)
+    y_te.push_back(104)
+    y_te.push_back(28)
+    y_te.push_back(57)
+    y_te.push_back(218)
+    y_te.push_back(13)
+    y_te.push_back(202)
+    y_te.push_back(153)
+    y_te.push_back(21)
+    y_te.push_back(195)
+    y_te.push_back(138)
+    y_te.push_back(188)
+
 
 #
 ### END OF PART 2 ###
@@ -407,6 +569,7 @@ def sum(vector):
     @for_range(vector.length().reveal())
     def _(i):
         result_array[0] = result_array[0] + sfloat(vector.get_element(i))
+        # result_array[0] += sfloat(vector.get_element(i))
     return result_array[0]
 
 def mean(vector):
@@ -428,14 +591,12 @@ def rmse_metric(actual, predicted_array):
     def _(i):
         prediction_err = predicted_array[i] - sfloat(actual.get_element(i))
         print_ln("pred_err %s", prediction_err.reveal())
-        sum_err[0] += (prediction_err ** 2)
+        # sum_err[0] += (prediction_err ** 2)
+        sum_err[0] = sum_err[0] + (prediction_err ** 2)
 
     print_ln("sum_err %s", sum_err[0].reveal())
+    print_ln("act_len %s", sfloat(sint(actual_length)).reveal())
     mean_err = sum_err[0] / sfloat(sint(actual_length))
-    print_ln("act_len %s", actual_length)
-    print_ln("act_len type %s", type(actual_length))
-    print_ln("sfloat sint act_len %s", sfloat(sint(actual_length)).reveal())
-    print_ln("sfloat act_len %s", sfloat(actual_length).reveal())
     print_ln("mean_err %s", mean_err.reveal())
     rmse = mpc_math.sqrt_simplified_fx(sfix(mean_err))
     return rmse
@@ -448,7 +609,7 @@ def covariance(x_vector, x_mean, y_vector, y_mean):
     covar[0] = 0.0
     @for_range(x_vector.length().reveal())
     def _(i):
-        # TODO change to +=
+        # covar[0] += ((sfloat(x_vector.get_element(i)) - x_mean)
         covar[0] = covar[0] + ((sfloat(x_vector.get_element(i)) - x_mean)
             * (sfloat(y_vector.get_element(i)) - y_mean))
     return covar[0]
@@ -461,8 +622,8 @@ def variance(vector, mean):
     var[0] = 0.0
     @for_range(vector.length().reveal())
     def _(i):
-        # TODO change to +=
         var[0] = var[0] + (sfloat(vector.get_element(i)) - mean) ** 2
+        # var[0] += (sfloat(vector.get_element(i)) - mean) ** 2
     return var[0]
 
 def coefficients(x_vector, y_vector):
@@ -496,8 +657,7 @@ def evaluate(x_train, x_test, y_train, y_test):
     rmse = rmse_metric(y_test, predicted)
     return rmse
 
-
-def load_data_from_file(x_train, x_test, y_train, y_test, split):
+def load_data_from_file(split):
     """
         Load data from an input file. Choose channels depending on your setting
         in src/Input_Output/Input_Output_<user_defined>.cpp file
@@ -505,7 +665,6 @@ def load_data_from_file(x_train, x_test, y_train, y_test, split):
     # Load external private data separated into x and y
     x = CustVector()
     get_external_private_array(x, 2005, 1)
-
     # Uncomment to check input
     # print_ln("++++++ this is x: +++++++")
     # x.show(20)
@@ -513,15 +672,13 @@ def load_data_from_file(x_train, x_test, y_train, y_test, split):
 
     y = CustVector()
     get_external_private_array(y, 3005, 1)
-
     # Uncomment to check input
     # print_ln("++++++ this is y: +++++++")
     # y.show(20)
     # print_ln("+++++++++++++++++++++++++")
 
-    x_train, x_test = split_up(x, split)
-    y_train, y_test = split_up(y, split)
-
+    x_train, x_test, y_train, y_test = split_up(x, y, split)
+    return x_train, x_test, y_train, y_test
 #
 ### END OF PART 3 ###
 
@@ -538,12 +695,27 @@ def main():
     # Set split
     split = 0.7
 
+
+ #TODO test red in but then run with already split data. so leave out split functino but incluse read in and check how long it takes
     # Pick / uncomment which data input is desired:
     # 1. Regular loading of data set.
-    # load_data_from_file(x_train, x_test, y_trian, y_test, split)
+    # x_train, x_test, y_train, y_test = load_data_from_file(split)
 
     # 2. Using preset data for testing & comparison with implemenation in python.
-    use_pre_split_data(x_train, x_test, y_train, y_test)
+    use_pre_split_data_2(x_train, x_test, y_train, y_test)
+
+    # if_then(A[2].reveal() == None)
+    # print_ln("hello2")
+    # end_if()
+
+    print_ln("=====x_train=============")
+    x_train.show(50)
+    print_ln("=====x_test=============")
+    x_test.show(20)
+    print_ln("=======y_train===========")
+    y_train.show(50)
+    print_ln("=====y_test=============")
+    y_test.show(20)
 
     rmse = evaluate(x_train, x_test, y_train, y_test)
     print_ln("==========================")

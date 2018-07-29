@@ -5,3 +5,5 @@
 # new Input_Output_<user_defined>.cpp files)
 # - Implement possibility for external input of sfloats. Changes in library
 # might be required.
+# - change comparisons in if statements and while loops so element is not
+# revealed
