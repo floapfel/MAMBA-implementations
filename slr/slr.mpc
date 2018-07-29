@@ -1,18 +1,24 @@
-# First verison of a simple linear regression algorithm in MAMBA, the
-# MPC language of the SCALE-MAMBA library.
+# A simple linear regression algorithm in MAMBA, the MPC language of
+# the SCALE-MAMBA library.
 #
-# The algorithm is an adapted verison of the one to be found here:
+# The algorithm is an adapted verison of the one presented here:
 # https://machinelearningmastery.com/implement-simple-linear-regression-scratch-python/
 
 # Author: Florian Apfelbeck, July, 2018
 
-## Next # TODO:
-# - undertsnd why split function makes rmse bad/ fix split function (same indexes, dont loose x<->y connection)
-# - test on swedish set
-# - test speed
-
 from Compiler import mpc_math, floatingpoint
 from random import seed, randrange
+
+# Set MAX_ARRAY_LENGTH at least to the maximum length of your data input. Then
+# adapt the bitsize of this number.  The bitsize is required for the random
+# function, which only takes Python native int, which therefore has to be preset.
+MAX_ARRAY_LENGTH = 10000
+MAX_ARRAY_LENGTH_NBIT = 14
+
+# NULL choosen here as -123456789. Be careful and change if your dataset
+# contains this number.  This is necessary since sint.Array() treats python
+# None like 0 (i.e., sint(None) is same as sint(0))
+NULL = -123456789
 
 # Length of mantissa in bits
 sfloat.vlen = 15
@@ -20,16 +26,6 @@ sfloat.vlen = 15
 sfloat.plen = 10
 # Statistical security parameter for floats
 sfloat.kappa = 4
-# NULL choosen here as -123456789. Be careful and change if your dataset
-# contains this number.  This is necessary since sint.Array() treats python
-# None like 0 (i.e., sint(None) is same as sint(0))
-NULL = -123456789
-
-# Set MAX_ARRAY_LENGTH at least to the maximum length of your data input. Then
-# adapt the bitsize of this number.  The bitsize is required for the random
-# function, which only takes Python native int, which therefore has to be preset.
-MAX_ARRAY_LENGTH = 10000
-MAX_ARRAY_LENGTH_NBIT = 14
 
 ### PART 1: BASICS ###
 # Definitions of class to support functions later.
@@ -157,8 +153,8 @@ def get_external_private_array(cust_vector, channel, player):
         else_then()
         condition.write(0)
         end_if()
-
         return condition > 0
+
     close_channel(channel)
 
 def split_up(x_vector, y_vector, split):
@@ -180,10 +176,6 @@ def split_up(x_vector, y_vector, split):
     print_ln("X and Y data do not have the same length! Check your input!")
     end_if()
 
-    print_ln("++++++input X++++++++")
-    x_vector.show(25)
-    print_ln("++++++input Y++++++++")
-    y_vector.show(25)
     # Calculate target lengths of train and test vectors
     train_target_length = sfloat(data_length) * sfloat(split)
     train_target_length = mpc_math.floor_fx(sfix(train_target_length)) + 1
@@ -251,15 +243,16 @@ def split_up(x_vector, y_vector, split):
             return condition > 0
 
 
-        print_ln("count: %s", count)
-        print_ln("x_elem: %s", x_element.reveal())
-        print_ln("y_elem: %s", y_element.reveal())
+        # print_ln("count: %s", count)
+        # print_ln("index: %s",index.reveal())
+        # print_ln("x_elem: %s", x_element.reveal())
+        # print_ln("y_elem: %s", y_element.reveal())
 
         x_train.push_back(x_element)
         y_train.push_back(y_element)
         delta_check = (train_target_length_sint_array[0]
             - x_train.length()).reveal()
-        print_ln("delta_check: %s", delta_check)
+        print_ln("progress splitting: %s", delta_check)
         return delta_check > 0
 
     # Loop over data vector to assign all left elements in data to test vector.
@@ -416,139 +409,6 @@ def use_pre_split_data(x_tr, x_te, y_tr, y_te):
     y_te.push_back(93)
     y_te.push_back(32)
     y_te.push_back(96)
-#####################
-def use_pre_split_data_2(x_tr, x_te, y_tr, y_te):
-
-    x_tr.push_back(14)
-    x_tr.push_back(4)
-    x_tr.push_back(13)
-    x_tr.push_back(9)
-    x_tr.push_back(45)
-    x_tr.push_back(5)
-    x_tr.push_back(13)
-    x_tr.push_back(41)
-    x_tr.push_back(6)
-    x_tr.push_back(3)
-    x_tr.push_back(12)
-    x_tr.push_back(41)
-    x_tr.push_back(19)
-    x_tr.push_back(9)
-    x_tr.push_back(13)
-    x_tr.push_back(5)
-    x_tr.push_back(57)
-    x_tr.push_back(25)
-    x_tr.push_back(16)
-    x_tr.push_back(13)
-    x_tr.push_back(29)
-    x_tr.push_back(8)
-    x_tr.push_back(15)
-    x_tr.push_back(20)
-    x_tr.push_back(53)
-    x_tr.push_back(108)
-    x_tr.push_back(31)
-    x_tr.push_back(23)
-    x_tr.push_back(4)
-    x_tr.push_back(2)
-    x_tr.push_back(8)
-    x_tr.push_back(124)
-    x_tr.push_back(6)
-    x_tr.push_back(7)
-    x_tr.push_back(0)
-    x_tr.push_back(23)
-    x_tr.push_back(11)
-    x_tr.push_back(55)
-    x_tr.push_back(3)
-    x_tr.push_back(40)
-    x_tr.push_back(22)
-    x_tr.push_back(27)
-    x_tr.push_back(10)
-    x_tr.push_back(6)
-    x_tr.push_back(17)
-
-    x_te.push_back(14)
-    x_te.push_back(48)
-    x_te.push_back(23)
-    x_te.push_back(7)
-    x_te.push_back(24)
-    x_te.push_back(3)
-    x_te.push_back(9)
-    x_te.push_back(29)
-    x_te.push_back(7)
-    x_te.push_back(11)
-    x_te.push_back(61)
-    x_te.push_back(4)
-    x_te.push_back(60)
-    x_te.push_back(37)
-    x_te.push_back(11)
-    x_te.push_back(30)
-    x_te.push_back(24)
-    x_te.push_back(26)
-
-    y_tr.push_back(14)
-    y_tr.push_back(4)
-    y_tr.push_back(13)
-    y_tr.push_back(9)
-    y_tr.push_back(45)
-    y_tr.push_back(5)
-    y_tr.push_back(13)
-    y_tr.push_back(41)
-    y_tr.push_back(6)
-    y_tr.push_back(3)
-    y_tr.push_back(12)
-    y_tr.push_back(41)
-    y_tr.push_back(19)
-    y_tr.push_back(9)
-    y_tr.push_back(13)
-    y_tr.push_back(5)
-    y_tr.push_back(57)
-    y_tr.push_back(25)
-    y_tr.push_back(16)
-    y_tr.push_back(13)
-    y_tr.push_back(29)
-    y_tr.push_back(8)
-    y_tr.push_back(15)
-    y_tr.push_back(20)
-    y_tr.push_back(53)
-    y_tr.push_back(108)
-    y_tr.push_back(31)
-    y_tr.push_back(23)
-    y_tr.push_back(4)
-    y_tr.push_back(2)
-    y_tr.push_back(8)
-    y_tr.push_back(124)
-    y_tr.push_back(6)
-    y_tr.push_back(7)
-    y_tr.push_back(0)
-    y_tr.push_back(23)
-    y_tr.push_back(11)
-    y_tr.push_back(55)
-    y_tr.push_back(3)
-    y_tr.push_back(40)
-    y_tr.push_back(22)
-    y_tr.push_back(27)
-    y_tr.push_back(10)
-    y_tr.push_back(6)
-    y_tr.push_back(17)
-
-    y_te.push_back(78)
-    y_te.push_back(248)
-    y_te.push_back(40)
-    y_te.push_back(49)
-    y_te.push_back(135)
-    y_te.push_back(4)
-    y_te.push_back(49)
-    y_te.push_back(104)
-    y_te.push_back(28)
-    y_te.push_back(57)
-    y_te.push_back(218)
-    y_te.push_back(13)
-    y_te.push_back(202)
-    y_te.push_back(153)
-    y_te.push_back(21)
-    y_te.push_back(195)
-    y_te.push_back(138)
-    y_te.push_back(188)
-
 
 #
 ### END OF PART 2 ###
@@ -569,7 +429,6 @@ def sum(vector):
     @for_range(vector.length().reveal())
     def _(i):
         result_array[0] = result_array[0] + sfloat(vector.get_element(i))
-        # result_array[0] += sfloat(vector.get_element(i))
     return result_array[0]
 
 def mean(vector):
@@ -590,14 +449,13 @@ def rmse_metric(actual, predicted_array):
     @for_range(actual_length)
     def _(i):
         prediction_err = predicted_array[i] - sfloat(actual.get_element(i))
-        print_ln("pred_err %s", prediction_err.reveal())
-        # sum_err[0] += (prediction_err ** 2)
+        # print_ln("pred_err %s", prediction_err.reveal())
         sum_err[0] = sum_err[0] + (prediction_err ** 2)
 
-    print_ln("sum_err %s", sum_err[0].reveal())
-    print_ln("act_len %s", sfloat(sint(actual_length)).reveal())
+    # print_ln("sum_err %s", sum_err[0].reveal())
+    # print_ln("act_len %s", sfloat(sint(actual_length)).reveal())
     mean_err = sum_err[0] / sfloat(sint(actual_length))
-    print_ln("mean_err %s", mean_err.reveal())
+    # print_ln("mean_err %s", mean_err.reveal())
     rmse = mpc_math.sqrt_simplified_fx(sfix(mean_err))
     return rmse
 
@@ -609,7 +467,6 @@ def covariance(x_vector, x_mean, y_vector, y_mean):
     covar[0] = 0.0
     @for_range(x_vector.length().reveal())
     def _(i):
-        # covar[0] += ((sfloat(x_vector.get_element(i)) - x_mean)
         covar[0] = covar[0] + ((sfloat(x_vector.get_element(i)) - x_mean)
             * (sfloat(y_vector.get_element(i)) - y_mean))
     return covar[0]
@@ -623,7 +480,6 @@ def variance(vector, mean):
     @for_range(vector.length().reveal())
     def _(i):
         var[0] = var[0] + (sfloat(vector.get_element(i)) - mean) ** 2
-        # var[0] += (sfloat(vector.get_element(i)) - mean) ** 2
     return var[0]
 
 def coefficients(x_vector, y_vector):
@@ -695,27 +551,12 @@ def main():
     # Set split
     split = 0.7
 
-
- #TODO test red in but then run with already split data. so leave out split functino but incluse read in and check how long it takes
     # Pick / uncomment which data input is desired:
     # 1. Regular loading of data set.
-    # x_train, x_test, y_train, y_test = load_data_from_file(split)
+    x_train, x_test, y_train, y_test = load_data_from_file(split)
 
     # 2. Using preset data for testing & comparison with implemenation in python.
-    use_pre_split_data_2(x_train, x_test, y_train, y_test)
-
-    # if_then(A[2].reveal() == None)
-    # print_ln("hello2")
-    # end_if()
-
-    print_ln("=====x_train=============")
-    x_train.show(50)
-    print_ln("=====x_test=============")
-    x_test.show(20)
-    print_ln("=======y_train===========")
-    y_train.show(50)
-    print_ln("=====y_test=============")
-    y_test.show(20)
+    # use_pre_split_data(x_train, x_test, y_train, y_test)
 
     rmse = evaluate(x_train, x_test, y_train, y_test)
     print_ln("==========================")
