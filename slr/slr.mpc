@@ -426,6 +426,7 @@ def sum(vector):
     """
     result_array = sfloat.Array(1)
     result_array[0] = 0.0
+
     @for_range(vector.length().reveal())
     def _(i):
         result_array[0] = result_array[0] + sfloat(vector.get_element(i))
@@ -520,14 +521,14 @@ def load_data_from_file(split):
     """
     # Load external private data separated into x and y
     x = CustVector()
-    get_external_private_array(x, 2005, 1)
+    get_external_private_array(x, 25, 1)
     # Uncomment to check input
     # print_ln("++++++ this is x: +++++++")
     # x.show(20)
     # print_ln("+++++++++++++++++++++++++")
 
     y = CustVector()
-    get_external_private_array(y, 3005, 1)
+    get_external_private_array(y, 35, 1)
     # Uncomment to check input
     # print_ln("++++++ this is y: +++++++")
     # y.show(20)
