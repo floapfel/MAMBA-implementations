@@ -24,13 +24,23 @@ class Input_Output_DataSet : public Input_Output_Base
   ifstream *inpf;
   ofstream *outf;
 
-  bool human; // Only affects share output
+  bool human; // Only affects share output#
+
+  // for sfloat read in
+  // int iter_ = 0;
+  int iter_;
+  int float_array[4] = {-1,-1,-1,0};
+
+  int float_v;
+  int float_p;
+  int float_s;
+  int float_z;
 
 public:
   Input_Output_DataSet()
       : Input_Output_Base()
   {
-    ;
+    iter_ = 0;
   }
 
   void init(ifstream &ifs, ofstream &ofs, bool human_type)
@@ -38,6 +48,12 @@ public:
     inpf= &ifs;
     outf= &ofs;
     human= human_type;
+    cout << "in the init+++++++++" << endl;
+    iter_ = 0;
+    float_v = -1;
+    float_p = -1;
+    float_s = -1;
+    float_z = 0;
   }
 
   virtual void open_channel(unsigned int channel);

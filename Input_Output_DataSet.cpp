@@ -66,19 +66,72 @@ gfp Input_Output_DataSet::private_input_gfp(unsigned int channel)
   int NULL_for_passing_to_mpc = -123456789;
   string str;
   float x;
+
+  // for sints
+  // int var = -1;
+  // if (inpf->good()) {
+  //   (*inpf) >> x;
+  //   if (!inpf->eof()) {
+  //     x = round(x);
+  //     var = static_cast<int>(x);
+  //   } else {
+  //     var = NULL_for_passing_to_mpc;
+  //   }
+  // }
+
+  int vlen = 15;
+
   int var = -1;
-  if (inpf->good()) {
-    (*inpf) >> x;
-    if (!inpf->eof()) {
-      x = round(x);
-      var = static_cast<int>(x);
-    } else {
-      var = NULL_for_passing_to_mpc;
-    }
+  gfp y;
+  // cout << "iter_: " << iter_ << endl;
+
+  // cout << "float: " << float_v << endl;
+  if(iter_ == 0) {
+      if (inpf->good()) {
+        (*inpf) >> x;
+        if (!inpf->eof()) {
+          if (x < 0) {
+              float_s = 1;
+          } else {
+              float_s=0;
+          }
+
+          if (x == 0) {
+            float_v = 0;
+            float_p = 0;
+            float_z = 1;
+          } else{
+            float_p = static_cast<int>(floor(log2(fabs(x)))) - vlen + 1;
+            float_v = static_cast<int>(round(fabs(x) * pow(2,-float_p)));
+          }
+          // x = round(x);
+          // var = static_cast<int>(x);
+          float_array[0] = float_v;
+          float_array[1] = float_p;
+          float_array[2] = float_s;
+          float_array[3] = float_z;
+          y.assign(float_array[iter_]);
+          iter_++;
+        } else {
+          var = NULL_for_passing_to_mpc;
+        }
+      }
+  } else {
+      y.assign(float_array[iter_]);
+      iter_++;
+      if(iter_ == 4) {
+        iter_ = 0;
+      }
   }
 
-  gfp y;
-  y.assign(var);
+  // cout << "float_v: " << float_v << endl;
+  // cout << "float_p: " << float_p << endl;
+  // cout << "float_s: " << float_s << endl;
+  // cout << "float_z: " << float_z << endl;
+  // cout << "x: " << x << endl;
+
+  // gfp y;
+  // y.assign(var);
   return y;
 }
 

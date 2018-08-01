@@ -101,6 +101,85 @@ class CustVector(object):
         def _(i):
             print_ln("%s", self.s_vector[i].reveal())
 
+class sfloatCustVector(object):
+    """
+        This is a prelimiary version of a customized array so it can be
+        addressed like a vector, e.g., using push_back(), pop() and length().
+        This makes handling of the data, especially when reading in and
+        splitting up, easier.
+
+        Since the lengths of arrays in .mpc fines have to be predefined
+        before compilation, check if MAX_ARRAY_LENGTH is long enough for dataset.
+
+        Implementation for sfloat. In push_back(), the memory address where the
+        sfloat is saved has to be passed. For sint direct passing in is possible.
+        This is done by saving the sint into a register of the VM. This is not
+        directly possible with sfloat and one has to manually save it into a
+        memory slot, where the four sfloat parts v, p, s and z are saved in four
+        memory slots following the address given.
+    """
+    def __init__(self):
+        self.s_vector = sfloat.Array(MAX_ARRAY_LENGTH)
+        self.end_ptr = MemValue(-1)
+        self.s_vector[0] = NULL
+
+    # TODO: change to if_then()
+    @method_block
+    def pop(self, index=None):
+        if index is None:
+            i = self.end_ptr + 0
+            self.end_ptr.write(self.end_ptr - 1)
+        else:
+            i = index
+
+        element = self.s_vector[i]
+        self.s_vector[i] = NULL
+        return element
+
+    # TODO: checge this to use of [] operator
+    @method_block
+    def get_element(self, index):
+        element =  self.s_vector[index]
+        return element
+
+    # TODO: change this to [] operator
+    @method_block
+    def set_element(self, index, element):
+        self.s_vector[index] = element
+        # For debugging:
+        # print_ln("element %s at %s changed!", element.reveal(), index)
+
+    @method_block
+    def push_back(self, address):
+        self.end_ptr.write(self.end_ptr + 1)
+        element = sfloat.load_mem(address)
+        # TODO flush memory
+        self.s_vector[self.end_ptr] = element
+        self.s_vector[self.end_ptr + 1] = NULL
+
+    @method_block
+    def back(self):
+        if_then(self.end_ptr == -1)
+        result = sfloat(NULL)
+        else_then()
+        result = self.s_vector[self.end_ptr]
+        end_if()
+        return result
+
+    # TODO: check if makes sense to protect length of vector since it has to be
+    # revealed for the for loops anyway
+    @method_block
+    def length(self):
+        return sint(self.end_ptr + 1)
+
+    # Shows the first x elements of the vector.
+    @method_block
+    def show(self, no_elements):
+        @for_range(no_elements)
+        def _(i):
+            print_ln("%s", self.s_vector[i].reveal())
+
+
 def test_CustVector(vector):
     """
         Function to test the new class CustVector and the input functionality.
@@ -565,3 +644,71 @@ def main():
     print_ln("==========================")
 
 main()
+
+############################
+# testing
+#
+# a = sfloat(-7.30000000005)
+#
+# print_ln("sfloat %s", a.reveal())
+# print_ln("sfloat.v %s", a.v.reveal())
+# print_ln("sfloat.p %s", a.p.reveal())
+# print_ln("sfloat.s %s", a.s.reveal())
+# print_ln("sfloat.z %s", a.z.reveal())
+# print_ln("type 1%s", type(a.v))
+#
+# a.v = sint(30991)
+# a.p = sint(-13)
+#
+# print_ln("type 0 %s", type(a))
+# print_ln("type 1 %s", type(a.v))
+# print_ln("type 1 %s", a.v.reveal())
+# print_ln("sfloat new %s", a.reveal())
+#
+#
+# ###############################################
+#
+#
+#
+# ###############################################
+# sfloat_array = sint.Array(4)
+# sfloat_vector = sfloatCustVector()
+#
+#
+# open_channel(5)
+# @for_range(5)
+# def _(i):
+#     @for_range(4)
+#     def _(j):
+#         sfloat_array[j] = sint.get_private_input_from(1)
+#
+#     mem_address = 0
+#     element = sfloat(0)
+#     element.v = sfloat_array[0]
+#     element.p = sfloat_array[1]
+#     element.s = sfloat_array[2]
+#     element.z = sfloat_array[3]
+#
+#     element.store_in_mem(mem_address)
+#     sfloat_vector.push_back(mem_address)
+#
+#     # arr2[i].v = sfloat__array[0]
+#     # arr2[i].p = sfloat__array[1]
+#     # arr2[i].s = sfloat__array[2]
+#     # arr2[i].z = sfloat__array[3]
+#     # print_ln("arr2 %s", arr2[0].reveal())
+#
+# close_channel(5)
+#
+# print_ln("++++++++++++++++")
+# sfloat_vector.show(8)
+# print_ln("++++++++++++++++")
+# #
+# # print_ln("typr %s", type(arr2))
+# # print_ln("typr %s", type(arr2[0]))
+# # print_ln("this is ittttt 0: %s", arr2[0].reveal())
+# # print_ln("this is ittttt 1: %s", arr2[1].reveal())
+# # print_ln("this is ittttt 2: %s", arr2[2].reveal())
+# # print_ln("this is ittttt 3: %s", arr2[3].reveal())
+# # print_ln("this is ittttt 4: %s", arr2[4].reveal())
+# # ##
