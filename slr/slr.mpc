@@ -15,6 +15,9 @@ from random import seed, randrange
 MAX_ARRAY_LENGTH = 10000
 MAX_ARRAY_LENGTH_NBIT = 14
 
+# TODO make mem addresses consistent
+MEM_ADDRESS = 0
+
 # NULL choosen here as -123456789. Be careful and change if your dataset
 # contains this number.  This is necessary since sint.Array() treats python
 # None like 0 (i.e., sint(None) is same as sint(0))
@@ -30,77 +33,6 @@ sfloat.kappa = 4
 ### PART 1: BASICS ###
 # Definitions of class to support functions later.
 ###
-class CustVector(object):
-    """
-        This is a prelimiary version of a customized array so it can be
-        addressed like a vector, e.g., using push_back(), pop() and length().
-        This makes handling of the data, especially when reading in and
-        splitting up, easier.
-
-        Since the lengths of arrays in .mpc fines have to be predefined
-        before compilation, check if MAX_ARRAY_LENGTH is long enough for dataset.
-        Implementation for sint.
-    """
-    def __init__(self):
-        self.s_vector = sint.Array(MAX_ARRAY_LENGTH)
-        self.end_ptr = MemValue(-1)
-        self.s_vector[0] = NULL
-
-    # TODO: change to if_then()
-    @method_block
-    def pop(self, index=None):
-        if index is None:
-            i = self.end_ptr + 0
-            self.end_ptr.write(self.end_ptr - 1)
-        else:
-            i = index
-
-        element = self.s_vector[i]
-        self.s_vector[i] = NULL
-        return element
-
-
-    # TODO: checge this to use of [] operator
-    @method_block
-    def get_element(self, index):
-        element =  self.s_vector[index]
-        return element
-
-    # TODO: change this to [] operator
-    @method_block
-    def set_element(self, index, element):
-        self.s_vector[index] = element
-        # For debugging:
-        # print_ln("element %s at %s changed!", element.reveal(), index)
-
-    @method_block
-    def push_back(self, element):
-        self.end_ptr.write(self.end_ptr + 1)
-        self.s_vector[self.end_ptr] = element
-        self.s_vector[self.end_ptr + 1] = NULL
-
-    @method_block
-    def back(self):
-        if_then(self.end_ptr == -1)
-        result = sint(NULL)
-        else_then()
-        result = self.s_vector[self.end_ptr]
-        end_if()
-        return result
-
-    # TODO: check if makes sense to protect length of vector since it has to be
-    # revealed for the for loops anyway
-    @method_block
-    def length(self):
-        return sint(self.end_ptr + 1)
-
-    # Shows the first x elements of the vector.
-    @method_block
-    def show(self, no_elements):
-        @for_range(no_elements)
-        def _(i):
-            print_ln("%s", self.s_vector[i].reveal())
-
 # TODO: BIG todo -> change all functions to in / out of this class via store_mem
 class sfloatCustVector(object):
     """
@@ -127,6 +59,7 @@ class sfloatCustVector(object):
     # TODO: change to if_then()
     @method_block
     def pop(self, index=None):
+        address = MEM_ADDRESS
         if index is None:
             i = self.end_ptr + 0
             self.end_ptr.write(self.end_ptr - 1)
@@ -134,13 +67,14 @@ class sfloatCustVector(object):
             i = index
 
         element = self.s_vector[i]
+        element.store_in_mem(address)
         self.s_vector[i] = NULL
-        return element
+        return address
 
     # TODO: checge this to use of [] operator
     @method_block
     def get_element(self, index):
-        address = 0
+        address = MEM_ADDRESS
         element =  self.s_vector[index]
         element.store_in_mem(address)
         return address
@@ -168,7 +102,8 @@ class sfloatCustVector(object):
         else_then()
         result = self.s_vector[self.end_ptr]
         end_if()
-        return result
+        result.store_in_mem(MEM_ADDRESS)
+        return MEM_ADDRESS
 
     # TODO: check if makes sense to protect length of vector since it has to be
     # revealed for the for loops anyway
@@ -183,28 +118,35 @@ class sfloatCustVector(object):
         def _(i):
             print_ln("%s", self.s_vector[i].reveal())
 
-# TODO: update for sfloatCustVector
-def test_CustVector(vector):
+def test_sfloatCustVector(vector):
     """
         Function to test the new class CustVector and the input functionality.
     """
-    get_external_private_array(vector, 1005, 1)
+    get_external_private_array(vector, 15, 1)
     vector.show(20)
     print_ln("-------------")
     length = vector.length()
-    element = vector.back()
+    mem_address_get = vector.back()
+    element = sfloat.load_mem(mem_address_get)
     print_ln("length: %s", length.reveal())
     print_ln("element: %s", element.reveal())
     print_ln("=============")
     #
     # implement your tests here
+    mem_address_get = vector.pop()
+    element2 = sfloat.load_mem(mem_address_get)
+    print_ln("element2: %s", element2.reveal())
+    mem_address_get = vector.pop(6)
+    element2 = sfloat.load_mem(mem_address_get)
+    print_ln("element2 new: %s", element2.reveal())
 
     #
     #
     vector.show(20)
     print_ln("-------------")
     length = vector.length()
-    element = vector.back()
+    mem_address_get = vector.back()
+    element = sfloat.load_mem(mem_address_get)
     print_ln("length: %s", length.reveal())
     print_ln("element: %s", element.reveal())
     print_ln("=============")
@@ -233,21 +175,15 @@ def get_external_private_array(cust_vector, channel, player):
         def _(j):
             sfloat_container_array[j] = sint.get_private_input_from(1)
 
-        print_ln("+++++++++++")
-        print_ln("input v: %s", sfloat_container_array[0].reveal())
-        print_ln("input p: %s", sfloat_container_array[1].reveal())
-        mem_address = 0
         input = sfloat(0)
         input.v = sfloat_container_array[0]
         input.p = sfloat_container_array[1]
         input.s = sfloat_container_array[2]
         input.z = sfloat_container_array[3]
-        print_ln("input: %s", input.reveal())
-        print_ln("+++++++++++")
 
         if_then((input.v != NULL).reveal())
-        input.store_in_mem(mem_address)
-        cust_vector.push_back(mem_address)
+        input.store_in_mem(MEM_ADDRESS)
+        cust_vector.push_back(MEM_ADDRESS)
         i.write(i + 1)
 
         else_then()
@@ -256,6 +192,63 @@ def get_external_private_array(cust_vector, channel, player):
         return condition > 0
 
     close_channel(channel)
+
+def get_random_index(data_length):
+    '''
+        Function to get a random index in the range of data_length. It is used
+        within the split function.
+    '''
+    index = MemValue(sint(0))
+    if_then((data_length < 16).reveal())
+    index.write(MemValue(sint.get_random_int(4)))
+    else_then()
+    if_then((data_length < 32).reveal())
+    index.write(MemValue(sint.get_random_int(5)))
+    else_then()
+    if_then((data_length < 64).reveal())
+    index.write(MemValue(sint.get_random_int(6)))
+    else_then()
+    if_then((data_length < 128).reveal())
+    index.write(MemValue(sint.get_random_int(7)))
+    else_then()
+    if_then((data_length < 256).reveal())
+    index.write(MemValue(sint.get_random_int(8)))
+    else_then()
+    if_then((data_length < 512).reveal())
+    index.write(MemValue(sint.get_random_int(9)))
+    else_then()
+    if_then((data_length < 1024).reveal())
+    index.write(MemValue(sint.get_random_int(10)))
+    else_then()
+    if_then((data_length < 2048).reveal())
+    index.write(MemValue(sint.get_random_int(11)))
+    else_then()
+    if_then((data_length < 4096).reveal())
+    index.write(MemValue(sint.get_random_int(12)))
+    else_then()
+    if_then((data_length < 8192).reveal())
+    index.write(MemValue(sint.get_random_int(13)))
+    else_then()
+    if_then((data_length < 16384).reveal())
+    index.write(MemValue(sint.get_random_int(14)))
+    else_then()
+    if_then((data_length < 32768).reveal())
+    index.write(MemValue(sint.get_random_int(15)))
+    end_if()
+    end_if()
+    end_if()
+    end_if()
+    end_if()
+    end_if()
+    end_if()
+    end_if()
+    end_if()
+    end_if()
+    end_if()
+    end_if()
+
+    print_ln("index: %s", index.reveal())
+    return index
 
 def split_up(x_vector, y_vector, split):
     """
@@ -278,7 +271,7 @@ def split_up(x_vector, y_vector, split):
 
     # Calculate target lengths of train and test vectors
     train_target_length = sfloat(data_length) * sfloat(split)
-    train_target_length = mpc_math.floor_fx(sfix(train_target_length)) + 1
+    train_target_length = mpc_math.floor_fx(sfix(train_target_length))
     test_target_length = data_length - train_target_length
 
     # Cast train_target_length to sint(), which is required in order to work
@@ -299,10 +292,12 @@ def split_up(x_vector, y_vector, split):
     # implemented later.
     @do_while
     def _():
-        index = MemValue(sint.get_random_int(MAX_ARRAY_LENGTH_NBIT))
+        # TODO: make random faster with if checks
+        index = MemValue(sint(0))
+        index.write(get_random_index(data_length))
+        print_ln("index out ++++++++++++++++++++++++++++++++%s", index.reveal())
+
         condition = MemValue(1)
-        # x_element = MemValue(sint(NULL))
-        # y_element = MemValue(sint(NULL))
         x_element = sfloat.Array(1)
         y_element = sfloat.Array(1)
 
@@ -313,11 +308,11 @@ def split_up(x_vector, y_vector, split):
         # the element at this place has not been assigned to the train set, yet.
         @do_while
         def _():
+            # print_ln("index: %s", index.reveal())
+            print_ln("index 11 %s", index.reveal())
             # if: 1st if-block
             if_then((index < data_length).reveal())
             # TODO: check for possibility to not have to reveal index here
-            # x_element.write(x_vector.get_element(index.reveal()))
-            # y_element.write(y_vector.get_element(index.reveal()))
             mem_address_get = x_vector.get_element(index.reveal())
             x_element[0] = sfloat.load_mem(mem_address_get)
             mem_address_get = y_vector.get_element(index.reveal())
@@ -327,16 +322,18 @@ def split_up(x_vector, y_vector, split):
             # TODO could add another check on y_element for safety reasons later
             if_then((x_element[0] != sfloat(NULL)).reveal())
             ind = index.reveal()
-            mem_address = 0
             null_element = sfloat(NULL)
-            null_element.store_in_mem(mem_address)
-            x_vector.set_element(ind, mem_address)
-            y_vector.set_element(ind, mem_address)
+            null_element.store_in_mem(MEM_ADDRESS)
+            x_vector.set_element(ind, MEM_ADDRESS)
+            y_vector.set_element(ind, MEM_ADDRESS)
             condition.write(0)
 
             # elseif: 2nd if-block
             else_then()
-            index.write(sint.get_random_int(MAX_ARRAY_LENGTH_NBIT))
+            print_ln("=======================================11111111111111111")
+            # index.write(sint.get_random_int(8))
+            index.write(get_random_index(data_length))
+            # index.write(sint.get_random_int(nbit))
             count.write(count + 1)
 
             # end: 2nd if-block
@@ -344,7 +341,10 @@ def split_up(x_vector, y_vector, split):
 
             # elseif: 1st if-block
             else_then()
-            index.write(sint.get_random_int(MAX_ARRAY_LENGTH_NBIT))
+            # index.write(sint.get_random_int(8))
+            # index.write(sint.get_random_int(nbit))
+            print_ln("=======================================222222222222222222")
+            index.write(get_random_index(data_length))
             count.write(count + 1)
 
             # end: 1st if-block
@@ -352,16 +352,15 @@ def split_up(x_vector, y_vector, split):
             return condition > 0
 
 
-        # print_ln("count: %s", count)
-        # print_ln("index: %s",index.reveal())
-        # print_ln("x_elem: %s", x_element.reveal())
-        # print_ln("y_elem: %s", y_element.reveal())
-        # TODO: check/make mem_address more concise
-        mem_address = 0
-        x_element[0].store_in_mem(mem_address)
-        x_train.push_back(mem_address)
-        y_element[0].store_in_mem(mem_address)
-        y_train.push_back(mem_address)
+        print_ln("count: %s", count)
+        print_ln("index: %s",index.reveal())
+        print_ln("x_elem: %s", x_element[0].reveal())
+        print_ln("y_elem: %s", y_element[0].reveal())
+
+        x_element[0].store_in_mem(MEM_ADDRESS)
+        x_train.push_back(MEM_ADDRESS)
+        y_element[0].store_in_mem(MEM_ADDRESS)
+        y_train.push_back(MEM_ADDRESS)
         delta_check = (train_target_length_sint_array[0]
             - x_train.length()).reveal()
         print_ln("progress splitting: %s", delta_check)
@@ -370,17 +369,28 @@ def split_up(x_vector, y_vector, split):
     # Loop over data vector to assign all left elements in data to test vector.
     @for_range(data_length.reveal())
     def _(i):
-        x_element = x_vector.get_element(cint(i))
-        y_element = y_vector.get_element(cint(i))
-        if_then((x_element != NULL).reveal())
-        if_then((y_element != NULL).reveal())
-        mem_address = 0
-        x_element.store_in_mem(mem_address)
-        x_test.push_back(mem_address)
-        y_element.store_in_mem(mem_address)
-        y_test.push_back(mem_address)
+        mem_address_get = x_vector.get_element(cint(i))
+        x_element = sfloat.load_mem(mem_address_get)
+        mem_address_get = y_vector.get_element(cint(i))
+        y_element = sfloat.load_mem(mem_address_get)
+
+        if_then((x_element != sfloat(NULL)).reveal())
+        if_then((y_element != sfloat(NULL)).reveal())
+        x_element.store_in_mem(MEM_ADDRESS)
+        x_test.push_back(MEM_ADDRESS)
+        y_element.store_in_mem(MEM_ADDRESS)
+        y_test.push_back(MEM_ADDRESS)
         end_if()
         end_if()
+
+    # print_ln("==============================")
+    # x_train.show(25)
+    # print_ln("==============================")
+    # x_test.show(25)
+    # print_ln("==============================")
+    # y_train.show(25)
+    # print_ln("==============================")
+    # y_test.show(25)
 
     return x_train, x_test, y_train, y_test
 
@@ -1184,6 +1194,16 @@ def load_data_from_file(split):
     print_ln("+++++++++++++++++++++++++")
 
     x_train, x_test, y_train, y_test = split_up(x, y, split)
+
+    print_ln("============x_train==================")
+    x_train.show(25)
+    print_ln("===========x_test===================")
+    x_test.show(25)
+    print_ln("==================y_train============")
+    y_train.show(25)
+    print_ln("===========y_test===================")
+    y_test.show(25)
+
     return x_train, x_test, y_train, y_test
 #
 ### END OF PART 3 ###
@@ -1199,93 +1219,31 @@ def main():
     y_test = sfloatCustVector()
 
     # Set split
-    split = 0.7
-
+    split = 0.6
+    start_timer(2)
     # Pick / uncomment which data input is desired:
     # 1. Regular loading of data set.
-    x_train, x_test, y_train, y_test = load_data_from_file(split)
+    # x_train, x_test, y_train, y_test = load_data_from_file(split)
     # 2. Using preset data for testing & comparison with implemenation in python.
-    # use_pre_split_data(x_train, x_test, y_train, y_test)
+    use_pre_split_data(x_train, x_test, y_train, y_test)
 
+    stop_timer(2)
+    start_timer(3)
     rmse = evaluate(x_train, x_test, y_train, y_test)
+    stop_timer(3)
 
     print_ln("==========================")
     print_ln("RMSE: %s", rmse.reveal())
     print_ln("==========================")
 
+start_timer(1)
 main()
+stop_timer(1)
 
-# t = sfloatCustVector()
-# get_external_private_array(t, 35, 1)
-# t.show(68)
-
-
-
-
-############################
-# testing
+# print_ln("++++++++++++++++++")
+# a = sint(4)
+# b = sint(5)
+# c = a + b
+# print_ln("c is: %s", c.reveal())
 #
-# a = sfloat(-7.30000000005)
-#
-# print_ln("sfloat %s", a.reveal())
-# print_ln("sfloat.v %s", a.v.reveal())
-# print_ln("sfloat.p %s", a.p.reveal())
-# print_ln("sfloat.s %s", a.s.reveal())
-# print_ln("sfloat.z %s", a.z.reveal())
-# print_ln("type 1%s", type(a.v))
-#
-# a.v = sint(30991)
-# a.p = sint(-13)
-#
-# print_ln("type 0 %s", type(a))
-# print_ln("type 1 %s", type(a.v))
-# print_ln("type 1 %s", a.v.reveal())
-# print_ln("sfloat new %s", a.reveal())
-#
-#
-# ###############################################
-#
-#
-#
-# ###############################################
-# sfloat_array = sint.Array(4)
-# sfloat_vector = sfloatCustVector()
-#
-#
-# open_channel(5)
-# @for_range(5)
-# def _(i):
-#     @for_range(4)
-#     def _(j):
-#         sfloat_array[j] = sint.get_private_input_from(1)
-#
-#     mem_address = 0
-#     element = sfloat(0)
-#     element.v = sfloat_array[0]
-#     element.p = sfloat_array[1]
-#     element.s = sfloat_array[2]
-#     element.z = sfloat_array[3]
-#
-#     element.store_in_mem(mem_address)
-#     sfloat_vector.push_back(mem_address)
-#
-#     # arr2[i].v = sfloat__array[0]
-#     # arr2[i].p = sfloat__array[1]
-#     # arr2[i].s = sfloat__array[2]
-#     # arr2[i].z = sfloat__array[3]
-#     # print_ln("arr2 %s", arr2[0].reveal())
-#
-# close_channel(5)
-#
-# print_ln("++++++++++++++++")
-# sfloat_vector.show(8)
-# print_ln("++++++++++++++++")
-# #
-# # print_ln("typr %s", type(arr2))
-# # print_ln("typr %s", type(arr2[0]))
-# # print_ln("this is ittttt 0: %s", arr2[0].reveal())
-# # print_ln("this is ittttt 1: %s", arr2[1].reveal())
-# # print_ln("this is ittttt 2: %s", arr2[2].reveal())
-# # print_ln("this is ittttt 3: %s", arr2[3].reveal())
-# # print_ln("this is ittttt 4: %s", arr2[4].reveal())
-# # ##
+# print_ln("++++++++++++++++++")
