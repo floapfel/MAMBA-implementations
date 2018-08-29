@@ -1223,9 +1223,9 @@ def main():
     start_timer(2)
     # Pick / uncomment which data input is desired:
     # 1. Regular loading of data set.
-    # x_train, x_test, y_train, y_test = load_data_from_file(split)
+    x_train, x_test, y_train, y_test = load_data_from_file(split)
     # 2. Using preset data for testing & comparison with implemenation in python.
-    use_pre_split_data(x_train, x_test, y_train, y_test)
+    # use_pre_split_data(x_train, x_test, y_train, y_test)
 
     stop_timer(2)
     start_timer(3)
@@ -1236,14 +1236,16 @@ def main():
     print_ln("RMSE: %s", rmse.reveal())
     print_ln("==========================")
 
-start_timer(1)
-main()
-stop_timer(1)
+# start_timer(1)
+# main()
+# stop_timer(1)
 
-# print_ln("++++++++++++++++++")
-# a = sint(4)
-# b = sint(5)
-# c = a + b
-# print_ln("c is: %s", c.reveal())
-#
-# print_ln("++++++++++++++++++")
+print_ln("++++++++++++++++++")
+start_timer(1)
+a = sint(4)
+b = sint(5)
+c = a + b
+print_ln("c is: %s", c.reveal())
+print_ln("++++++++++++++++++")
+stop_timer(1)
+print_ln("++++++++++++++++++")

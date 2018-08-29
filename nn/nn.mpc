@@ -1,0 +1,424 @@
+# A simple feed-forward neural network in MAMBA, the MPC language of
+# the SCALE-MAMBA library.
+#
+# The algorithm is an adapted verison of the one presented here:
+# https://github.com/ludobouan/pure-numpy-feedfowardNN
+
+# Author: Florian Apfelbeck, August, 2018
+
+# TODO:
+# doing class for NN not recommended sinc 'method_block does not allow output
+# of matrix' and without method block, compiling takes a long time
+
+from Compiler import mpc_math
+import numpy as np
+
+# Set MAX_ARRAY_LENGTH at least to the maximum length of your data input. Then
+# adapt the bitsize of this number.  The bitsize is required for the random
+# function, which only takes Python native int, which therefore has to be preset.
+MAX_ARRAY_LENGTH = 10000
+MAX_ARRAY_LENGTH_NBIT = 14
+
+# TODO make mem addresses consistent
+MEM_ADDRESS = 0
+
+# NULL choosen here as -123456789. Be careful and change if your dataset
+# contains this number.  This is necessary since sint.Array() treats python
+# None like 0 (i.e., sint(None) is same as sint(0))
+NULL = -123456789
+
+EULER = 2.71828
+
+# Length of mantissa in bits
+sfloat.vlen = 15
+# Length of exponent in bits
+sfloat.plen = 10
+# Statistical security parameter for floats
+sfloat.kappa = 4
+
+# Numpy random seed
+np.random.seed(1)
+
+### PART 1: BASICS ###
+# Definitions of class to support functions later.
+###
+# class NeuralNetwork():
+#     def __init__(self):
+#         self.weights = sfloat.Array(MAX_ARRAY_LENGTH)
+#         self.num_layers = 1
+#         self.adjustments = sfloat.Array(MAX_ARRAY_LENGTH)
+
+def add_layer(in_dim, neuron_dim):
+    # Create weights + biases
+    shape = (in_dim, neuron_dim)
+    n = MemValue(num_hidden_layer)
+
+    # Create weights and biases (not secret here yet, numpy used )
+    weights_numpy = 2 * np.random.random(shape) - 1
+    biases_numpy = 2 * np.random.random((1, shape[1])) - 1
+
+    # Convert weight matrix from numpy to sfix
+    # i = 0
+    i = MemValue(0)
+    j = MemValue(0)
+    i.write(0)
+    for row in weights_numpy:
+        j.write(0)
+        for column in row:
+            val_sfloat = sfloat(column)
+            # print_ln("n: %s", n)
+            # print_ln("i: %s", i)
+            # print_ln("j: %s", j)
+            weights[n][i][j] = sfix(val_sfloat)
+            j.write(j + 1)
+        i.write(i + 1)
+
+    # Convert biases from numpy to sfix
+    i.write(0)
+    for column in biases_numpy[0]:
+        val_sfloat = sfloat(column)
+        biases[n][i] = sfix(val_sfloat)
+        i.write(i + 1)
+
+    num_hidden_layer.write(num_hidden_layer + 1)
+    # print_ln("++++++++++++++++")
+    # @for_range(9)
+    #     print_ln("w_1[%s] %s ", i, weights[0][0][i].reveal())
+    # def _(i):
+    #
+    # @for_range(9)
+    # def _(i):
+    #     print_ln("w_2[%s]: %s", i, weights[1][0][i].reveal())
+    #
+    # @for_range(9)
+    # def _(i):
+    #     print_ln("b[%s]: %s", i, biases[0][i].reveal())
+    # print_ln("++++++++++++++++")
+
+def __sigmoid(x):
+    return sfix(1) / (sfix(1) + mpc_math.exp2_fx(-x * mpc_math.log2_fx(sfix(EULER))))
+
+def __sigmoid_derivative(x):
+    return x * (1 - x)
+
+def dot_prod(x_array, y_matrix, layer):
+    output = sfix.Array(max_dim_largest_layer)
+    # TODO: maybe better do range of layer dimensions and not the full thing?
+    # Rows of output has dimensions of columns of weights (y_matrix)
+    sum_ = sfix.Array(1)
+
+    @for_range(9)
+    def _(i):
+        print_ln("x_arr[%s]: %s", i, x_array[i].reveal())
+        print_ln("y_matrix[%s]: %s", i, y_matrix[i][0].reveal())
+
+    @for_range(layer_dimensions[layer][1])
+    def _(i):
+        sum_[0] = sfix(0.0)
+        @for_range(layer_dimensions[layer][0])
+        def _(j):
+            product = x_array[j] * y_matrix[j][i]
+            sum_[0] = sum_[0] + product
+        output[i] = sum_[0]
+
+    @for_range(max_dim_largest_layer)
+    def _(i):
+        x_array[i] = output[i]
+
+def __forward_propagate(data, input_iteration):
+    # activation_values multiarray includes the first (input) layer (at 0), contrary to
+    # weights and biases (1st hidden layer at n=0)
+    # activation_values 2D-matrix (n,i) with n number of layer, and i neuron
+    # within that layer n
+    activation_values = sfix.Matrix(tot_num_layers, max_dim_largest_layer)
+    data_temp = sfix.Array(max_dim_largest_layer)
+
+    print_ln("height training %s", len(data))
+    print_ln("width training %s", len(data[0]))
+    # print_ln("but data[0][5] %s", data[0][5].reveal())
+    print_ln("but data[6][1] %s", data[6][1].reveal())
+    # print_ln("but data[5][3] %s", data[5][3].reveal())
+
+
+
+    print_ln("--data__")
+    @for_range(9)
+    def _(i):
+        print_ln("input iteration: %s", input_iteration)
+        print_ln("d[%s]: %s", i, data[input_iteration][i].reveal())
+    print_ln("len data++ %s", len(data[0]))
+    @for_range(len(data[0]))
+    def _(i):
+        data_temp[i] = data[input_iteration][i]
+        print_ln("data_temp[%s]: %s", i, data_temp[i].reveal())
+
+    print_ln("data_temp[%s]: %s", 1, data_temp[1].reveal())
+
+    # Assign data to activation_values
+    print_ln("len data %s", len(data[0]))
+    @for_range(len(data[0]))
+    def _(i):
+        activation_values[0][i] = data[input_iteration][i]
+    # For Debugging: checks that assignment is correct
+    @for_range(3)
+    def _(i):
+        print_ln("a[%s] %s %s %s", i, activation_values[i][0].reveal(), activation_values[i][1].reveal(), activation_values[i][1].reveal())
+
+    @for_range(tot_num_hidden_layers)
+    def _(layer):
+        # Layer refers to layer in activation_values here
+        layer = layer + 1
+        # Sum weights and biases
+        # sum_weight_bias = sfix.Matrix(max_dim_largest_layer, max_dim_largest_layer)
+        print_ln("layer dim %s", layer_dimensions[layer-1][1])
+        print_ln("Layer number %s", layer)
+        # Dot product
+        dot_prod(data_temp, weights[layer-1], layer-1)
+        @for_range(9)
+        def _(i):
+            print_ln("d_t %s", data_temp[i].reveal())
+
+        # @for_range(len(data_temp))
+        # def _(i):
+        #     data_temp[i] = data_temp[i] + biases[layer-1][i]
+
+
+
+
+###########################
+# Test add_layer()
+# weights, b, adjustments = add_layer()
+#
+# print_ln("===================")
+# @for_range(9)
+# def _(i):
+#     print_ln("w[%s] %s ", i, weights[0][i].reveal())
+# print_ln("")
+# @for_range(9)
+# def _(i):
+#     print_ln("w[%s]: %s", i, weights[1][i].reveal())
+#
+# print(b)
+# @for_range(9)
+# def _(i):
+#     print_ln("b[%s]: %s", i, b[0][i].reveal())
+#
+# @for_range(9)
+# def _(k):
+#     print_ln("a[%s]: %s", k, adjustments[0][0][k].reveal())
+#
+# print_ln("===================")
+
+###############################
+# num_layers = 1
+#
+# weights =
+########################
+# Number of layers and dimensions of largest layer have to be predefined so
+# arithmetic circuit can be created accortingly
+tot_num_layers = 3
+# Output layer included in hidden layers
+tot_num_hidden_layers = tot_num_layers - 1
+
+# largest dimension of largest layer`
+max_dim_largest_layer = 9
+
+#
+# # def test(weights, biases):
+# def test():
+#     weights[1][0][0] = 74.43
+#     weights[2][0][0] = 210.47
+
+# Initialization of weights and biases
+weights = sfix.MultiArray([tot_num_hidden_layers, max_dim_largest_layer, max_dim_largest_layer])
+biases = sfix.Matrix(tot_num_hidden_layers, max_dim_largest_layer)
+# num layers 3, data dim 2, layer dim 9
+# adjustments = sfix.MultiArray([tot_num_hidden_layers, in_largest_layer, neurons_largest_layer])
+
+# Dimensions of layers [n][0]: layer n in, [n][1]: layer n neurons
+layer_dimensions = cint.Matrix(tot_num_hidden_layers, 2)
+layer_dimensions[0][0] = 2
+layer_dimensions[0][1] = 9
+layer_dimensions[1][0] = 9
+layer_dimensions[1][1] = 1
+
+# Initiate count of added hidden layer
+num_hidden_layer = MemValue(0)
+add_layer(2,9)
+print_ln("layer no: %s", num_hidden_layer)
+add_layer(9,1)
+print_ln("layer no: %s", num_hidden_layer)
+
+###############################
+# print_ln("w_1[%s] %s ", 1, weights[0][0][1].reveal())
+# print_ln("w_1[%s] %s ", 2, weights[1][0][0].reveal())
+# print_ln("++++++++++++++++")
+# @for_range(9)
+# def _(i):
+#     print_ln("w_1[%s] %s ", i, weights[0][i][0].reveal())
+# @for_range(9)
+# def _(i):
+#     print_ln("w_2[%s]: %s", i, weights[1][i][0].reveal())
+#
+# @for_range(9)
+# def _(i):
+#     print_ln("b[%s]: %s", i, biases[1][i].reveal())
+# print_ln("++++++++++++++++")
+########################
+# Set length and width (options) of training set
+length_training_set = 4
+options_training_set = 2
+
+# Create training data
+training_data = sfix.Matrix(length_training_set,options_training_set)
+training_labels = sfix.Array(length_training_set)
+
+# 0,0 -> 0
+training_data[0][0] = 0
+training_data[0][1] = 0
+training_labels[0] = 0
+# 0,1 -> 1
+training_data[1][0] = 0
+training_data[1][1] = 1
+training_labels[1] = 1
+# 1,0 -> 1
+training_data[2][0] = 1
+training_data[2][1] = 0
+training_labels[2] = 1
+# 1,1 -> 0
+training_data[3][0] = 1
+training_data[3][1] = 1
+training_labels[3] = 0
+
+# print_ln("height training %s", len(training_data))
+# print_ln("width training %s", len(training_data[0]))
+#
+# input_iteration = 3
+# @for_range(9)
+# def _(i):
+#     print_ln("input iteration: %s", input_iteration)
+#     print_ln("z[%s]: %s", i, training_data[input_iteration][i].reveal())
+
+
+@for_range(length_training_set)
+def _(i):
+    __forward_propagate(training_data, i)
+
+
+#################################
+# f = sfix.Array(5)
+#
+# def test(check, d):
+#     print_ln("yup")
+#     # d = sfix.Array(5)
+#     d[0] = 1
+#     d[1] = 2
+#     d[2] = 3
+#     d[3] = 4
+#     d[4] = 5
+#     # return d
+#
+# @for_range(2)
+# def _(i):
+#     test(i, f)
+#
+# @for_range(5)
+# def _(i):
+#     print_ln("f[%s]: %s", i, f[i].reveal())
+#
+
+
+###############################
+# n = 10
+# x = sfix.Matrix(2,n)
+#
+# @for_range(n)
+# def _(i):
+#     x[0][i] = sfix(sfix(i)+ sfix(1.1))
+#
+# def test(matrix):
+#     matrix[0][3] = 1234
+#     c = sfix.Matrix(2,n)
+#     c[0][0] = 1432
+#     return c
+#
+# y = test(x)
+# @for_range(n)
+# def _(i):
+#     print_ln("%s", y[0][i].reveal())
+###################################
+
+# def create_rand_sfloat
+
+# print_ln("len %s", c[1][1].reveal())
+#
+# a[1][1] = sint(12)
+# c[1][1] = sfloat(12)
+
+# @for_range(len(a[0]))
+# def _(i):
+#     a[0][i] = sfloat(12.1)
+#     a[1][i] = sfloat(13.1)
+
+# print_ln("+++++++")
+#
+# @for_range(len(a[0]))
+# def _(i):
+#     print_ln("%s", a[0][i].reveal())
+#
+# print_ln("----------------")
+# @for_range(len(a[0]))
+# def _(i):
+#     print_ln("%s", a[1][i].reveal())
+#     print_ln("this is b %s", b.reveal())
+
+print_ln("+++++++")
+
+
+# n = 3
+# m = 4
+# p = 5
+# a = sfloat.MultiArray([n,m,p])
+# b = sfloat.MultiArray([n,m,p])
+# c = sfloat.MultiArray([n,m,p])
+# # for i in range(n):
+# @for_range(n)
+# def _(i):
+#     @for_range(m)
+#     def _(j):
+#         @for_range(p)
+#         def _(k):
+# # for j in range(m):
+#     # for k in range(p):
+#             a[i][j][k] = 12.4
+#             b[i][j][k] = 2 * (i + j + k)
+#             c[i][j][k] = (a[i][j][k] + b[i][j][k])
+#
+# @for_range(3)
+# def _(i):
+#     print_ln("%s", a[1][1][i].reveal())
+
+
+
+
+# ###############################
+# # FOR REPORT : comparison everything converting in sfloat or stay in sfix
+#
+# start_timer(1)
+# y = sfix(4)
+# sigmoid = sfix(1) / (sfix(1) + mpc_math.exp2_fx(y * mpc_math.log2_fx(sfix(EULER))))
+# print_ln("sigmoid %s", sigmoid.reveal())
+# stop_timer(1)
+#
+# start_timer(2)
+# y2 = sfloat(4)
+# sigmoid2 = sfloat(1) / (sfloat(1) + sfloat(mpc_math.exp2_fx(sfix(y * sfloat(mpc_math.log2_fx(sfix(EULER)))))))
+# print_ln("sigmoid2 %s", sigmoid2.reveal())
+# stop_timer(2)
+#
+#
+# ###############################
+
+
+
+#

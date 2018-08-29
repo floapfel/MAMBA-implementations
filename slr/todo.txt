@@ -1,7 +1,3 @@
 # TODO:
-# - Create README elaborating how to run this with documentation of required
-# changes in SCALE-MAMBA source code (eg. IO.h, Player.cpp and
-# new Input_Output_<user_defined>.cpp files)
-# - Implement possibility for external input of sfloats. Changes in library
-# might be required.
+# - Enable output of values in file
 # - Implement multidimenitonal CustVector (to have x and y values in one vector)
