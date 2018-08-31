@@ -1,3 +1,4 @@
 # TODO:
+# - Make code in IO file nice. Quite messy right now. 
 # - Enable data output in file
 # - Implement multidimenitonal CustVector (to have x and y values in one vector)
