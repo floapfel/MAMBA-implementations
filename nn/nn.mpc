@@ -7,6 +7,11 @@
 # Author: Florian Apfelbeck, August, 2018
 
 # TODO:
+# - adjust / align variables with slr code (e.g., targets vs. predictions)
+# - for loops might be faster when using directly variables and go not via
+# layer_dimensions[][]. Like this, for loops are maybe compiled with a fix
+# end/sized circuit -> check it out
+
 # doing class for NN not recommended sinc 'method_block does not allow output
 # of matrix' and without method block, compiling takes a long time
 
@@ -56,6 +61,7 @@ def add_layer(in_dim, neuron_dim):
     # Create weights and biases (not secret here yet, numpy used )
     weights_numpy = 2 * np.random.random(shape) - 1
     biases_numpy = 2 * np.random.random((1, shape[1])) - 1
+    print(weights_numpy)
 
     # Convert weight matrix from numpy to sfix
     # i = 0
@@ -107,39 +113,51 @@ def dot_prod(x_array, y_matrix, layer):
     # Rows of output has dimensions of columns of weights (y_matrix)
     sum_ = sfix.Array(1)
 
-    @for_range(9)
-    def _(i):
-        print_ln("x_arr[%s]: %s", i, x_array[i].reveal())
-        print_ln("y_matrix[%s]: %s", i, y_matrix[i][0].reveal())
+    # For debugging:
+    # @for_range(9)
+    # def _(i):
+    #     print_ln("x_arr[%s]: %s", i, x_array[i].reveal())
+    #     print_ln("y_matrix[%s]: %s", i, y_matrix[i][0].reveal())
 
+    # Even if assigned within this function, output keeps its values from
+    # the last call of this function. It's cleaner to set is everytime to 0.0.
+    # Like that, data_temp in --__forward_propagate function only has the values
+    # which actually matter (i.e., for output layer, only data_temp[0] has an
+    # entry, since output layer has size 1).
+    # Other option would be to only assign the correct layer dimensions,
+    # therefore keep the data of the previous layer in data_temp and just call
+    # the right dimension then from data_temp. SEE BELOW[*]
+    # @for_range(max_dim_largest_layer)
+    # def _(m):
+    #     output[m] = 0.0
+
+    # Compute dot product
     @for_range(layer_dimensions[layer][1])
     def _(i):
         sum_[0] = sfix(0.0)
+
         @for_range(layer_dimensions[layer][0])
         def _(j):
             product = x_array[j] * y_matrix[j][i]
             sum_[0] = sum_[0] + product
         output[i] = sum_[0]
 
+    # SEE ABOVE[*]. Still here for testing. TODO: to be removed at one point
+    @for_range(layer_dimensions[layer][1])
     @for_range(max_dim_largest_layer)
     def _(i):
         x_array[i] = output[i]
 
-def __forward_propagate(data, input_iteration):
+def __forward_propagate(data, input_iteration, activation_values):
     # activation_values multiarray includes the first (input) layer (at 0), contrary to
     # weights and biases (1st hidden layer at n=0)
     # activation_values 2D-matrix (n,i) with n number of layer, and i neuron
     # within that layer n
-    activation_values = sfix.Matrix(tot_num_layers, max_dim_largest_layer)
+    # activation_values = sfix.Matrix(tot_num_layers, max_dim_largest_layer)
     data_temp = sfix.Array(max_dim_largest_layer)
 
     print_ln("height training %s", len(data))
     print_ln("width training %s", len(data[0]))
-    # print_ln("but data[0][5] %s", data[0][5].reveal())
-    print_ln("but data[6][1] %s", data[6][1].reveal())
-    # print_ln("but data[5][3] %s", data[5][3].reveal())
-
-
 
     print_ln("--data__")
     @for_range(9)
@@ -150,7 +168,6 @@ def __forward_propagate(data, input_iteration):
     @for_range(len(data[0]))
     def _(i):
         data_temp[i] = data[input_iteration][i]
-        print_ln("data_temp[%s]: %s", i, data_temp[i].reveal())
 
     print_ln("data_temp[%s]: %s", 1, data_temp[1].reveal())
 
@@ -174,45 +191,157 @@ def __forward_propagate(data, input_iteration):
         print_ln("Layer number %s", layer)
         # Dot product
         dot_prod(data_temp, weights[layer-1], layer-1)
+
+        @for_range(9)
+        def _(i):
+            print_ln("bias[%s][%s]: %s", layer-1, i, biases[layer-1][i].reveal())
+
+        @for_range(layer_dimensions[layer-1][1])
+        def _(i):
+            data_temp[i] = data_temp[i] + biases[layer-1][i]
+
+        @for_range(layer_dimensions[layer-1][1])
+        def _(i):
+            data_temp[i] = __sigmoid(data_temp[i])
+
+        print_ln("d_t only [0] %s", data_temp[0].reveal())
+
+        # For Debugging:
+        # After first hidden layer  (so before output) of first iteration of
+        # data, so training_data[0][x] and layer = 2, data_temp[0] has
+        # to be same as print statement in python code with
+        # print("data out after sigmoid)
         @for_range(9)
         def _(i):
             print_ln("d_t %s", data_temp[i].reveal())
 
-        # @for_range(len(data_temp))
-        # def _(i):
-        #     data_temp[i] = data_temp[i] + biases[layer-1][i]
+        @for_range(layer_dimensions[layer-1][1])
+        def _(i):
+            activation_values[layer][i] = data_temp[i]
+
+# Sum squared error
+def sum_squared_error(outputs, target_vector):
+    @for_range(len(outputs))
+    def _(i):
+        print_ln("outputs[%s]: %s", i, outputs[i].reveal())
+
+    @for_range(len(target_vector))
+    def _(i):
+        print_ln("target_vector[%s]: %s", i, target_vector[i].reveal())
+
+    print_ln("len target_vector %s", len(target_vector))
+
+    # target_vector_err = sfloat.Array(len(target_vector))
+    sum_err = sfloat.Array(1)
+    sum_err[0] = 0.0
+    @for_range(len(target_vector))
+    def _(i):
+        print_ln("print outp again %s", outputs[i].reveal())
+        print_ln("print targ again %s", target_vector[i].reveal())
+        targets_err = sfloat(outputs[i]) - sfloat(target_vector[i])
+        print_ln("targ_err: %s", targets_err.reveal())
+        # might need sfloats here
+        sum_err[0] = sum_err[0] + (targets_err ** 2)
+
+    print_ln("sum_err: %s", sum_err[0].reveal())
+    mean_err = sum_err[0] / sfloat(len(target_vector))
+    print_ln("mean_err: %s", mean_err.reveal())
+    # TODO: check if this can be float..
+    return sfix(sfloat(0.5) * mean_err)
+
+def __back_propagate(activ_val_matrix, target_vector):
+    # deltas[number of layer, excl. input][number of neuron/delta].
+    # Layers are [0]: 1st hidden layer, [last]: output layer
+    deltas = sfix.Matrix(tot_num_hidden_layers, max_dim_largest_layer)
+    weights_layer = sfix.Matrix(max_dim_largest_layer, max_dim_largest_layer)
+    prev_deltas = sfix.Array(max_dim_largest_layer)
+    a_val = sfix.Array(max_dim_largest_layer)
+
+    # active_val[number of layer, incl. input][number of neuron]
+    print_ln("layer dim last layer %s", layer_dimensions[tot_num_hidden_layers][1])
+    @for_range(layer_dimensions[tot_num_hidden_layers][1])
+    def _(i):
+        deltas[tot_num_hidden_layers][i] = activ_val_matrix[tot_num_layers][i]
+
+    layer = MemValue(tot_num_hidden_layers - 1)
+    print_ln("layer layer %s", layer)
+    # shouldn't it also go to input layer, i.e., taking the first weights into
+    # account??
+    @for_range(tot_num_hidden_layers - 1)
+    def _(i):
+        layer.write(layer - i)
+        print_ln("lay cc xx %s", layer_dimensions[layer][1])
+        print_ln("lay cc xx2 %s", layer_dimensions[layer][0])
+        print_ln("len a_val[x] %s", len(a_val))
+        print_ln("len active_val[x] %s", len(activ_val_matrix))
+        print_ln("len active_val[][x] %s", len(activ_val_matrix[0]))
+        @for_range(layer_dimensions[layer][1])
+        def _(j):
+            a_val[j] = activ_val_matrix[layer+1][j]
+            print_ln("here")
+            @for_range(layer_dimensions[layer][0])
+            def _(k):
+                weights_layer[k][j] = weights[layer][k][j]
+
+        @for_range(9)
+        def _(j):
+            print_ln("a_val[%s]: %s", j, a_val[j].reveal())
+            @for_range(9)
+            def _(k):
+                print_ln("weights_layer[%s][%s]: %s", k, j, weights_layer[k][j].reveal())
+
+        @for_range(max_dim_largest_layer)
+        def _(j):
+            prev_deltas[j] = deltas[layer+1][j]
+
+        @for_range(9)
+        def _(j):
+            print_ln("prev_deltas[%s] %s", j, prev_deltas[j].reveal())
+
+        # @for_range(layer_dimensions[layer+1][1])
+        # def _(j):
+        #     sig_deriv[j] = __sigmoid_derivative(a_val[j])
+        # # dot product (matrix x array)
+        # # dot_product_MxA(weights_layer, prev_deltas, dot_product_out1, layer+1)
+        #
+        # # multiply
+        # @for_range(xxx)
+        # def _(j):
+        #     deltas[layer][j] = multiply(dot_product, sig_deriv)
+        #
+        #
+        # dot_productMxM(deltas, activ_val_matrix, dot_product_out2, layer+1)
+        # @for_range(tot_num_layers)
+        # def _(j):
+        #     adjustments[layer][j] = adjustments[layer][j] + dot_product_out2
+
+def __gradient_descent(batch_size, learning_rate):
+    partial_d = sfix.Matrix(max_dim_largest_layer, max_dim_largest_layer)
+    @for_range(tot_num_layers)
+    def _(layer):
+        # TODO: adjust range?
+        @for_range(max_dim_largest_layer)
+        def _(i):
+            @for_range(max_dim_largest_layer)
+            def _(j):
+                # maybe sfloat necessary here
+                partial_d = (1/batch_size) * adjustments[layer][i][j]
+                # partial_d2 = (1/batch_size) * adjustments[layer][i][j]
+                weights[layer][i][j] = weights[layer][i][j] + (learning_rate * -partial_d)
+                # weights[layer][i][j] = weights[layer][i][j] + (learning_rate*sfix(0.001) * -partial_d2)
 
 
+        # weights[layer]
 
 
-###########################
-# Test add_layer()
-# weights, b, adjustments = add_layer()
+# test1 = sfix.Array(1)
+# test2 = sfix.Array(1)
 #
-# print_ln("===================")
-# @for_range(9)
-# def _(i):
-#     print_ln("w[%s] %s ", i, weights[0][i].reveal())
-# print_ln("")
-# @for_range(9)
-# def _(i):
-#     print_ln("w[%s]: %s", i, weights[1][i].reveal())
+# test1[0] = 0.603411
+# test2[0] = 1
 #
-# print(b)
-# @for_range(9)
-# def _(i):
-#     print_ln("b[%s]: %s", i, b[0][i].reveal())
-#
-# @for_range(9)
-# def _(k):
-#     print_ln("a[%s]: %s", k, adjustments[0][0][k].reveal())
-#
-# print_ln("===================")
-
-###############################
-# num_layers = 1
-#
-# weights =
+# testloss = sum_squared_error(test1, test2)
+# print_ln("testloss %s", testloss)
 ########################
 # Number of layers and dimensions of largest layer have to be predefined so
 # arithmetic circuit can be created accortingly
@@ -223,12 +352,8 @@ tot_num_hidden_layers = tot_num_layers - 1
 # largest dimension of largest layer`
 max_dim_largest_layer = 9
 
-#
-# # def test(weights, biases):
-# def test():
-#     weights[1][0][0] = 74.43
-#     weights[2][0][0] = 210.47
-
+# TODO: make concise, when passing matrix in function and when just using
+# it on a global scope
 # Initialization of weights and biases
 weights = sfix.MultiArray([tot_num_hidden_layers, max_dim_largest_layer, max_dim_largest_layer])
 biases = sfix.Matrix(tot_num_hidden_layers, max_dim_largest_layer)
@@ -250,59 +375,86 @@ add_layer(9,1)
 print_ln("layer no: %s", num_hidden_layer)
 
 ###############################
-# print_ln("w_1[%s] %s ", 1, weights[0][0][1].reveal())
-# print_ln("w_1[%s] %s ", 2, weights[1][0][0].reveal())
-# print_ln("++++++++++++++++")
-# @for_range(9)
-# def _(i):
-#     print_ln("w_1[%s] %s ", i, weights[0][i][0].reveal())
-# @for_range(9)
-# def _(i):
-#     print_ln("w_2[%s]: %s", i, weights[1][i][0].reveal())
-#
-# @for_range(9)
-# def _(i):
-#     print_ln("b[%s]: %s", i, biases[1][i].reveal())
-# print_ln("++++++++++++++++")
-########################
+
 # Set length and width (options) of training set
 length_training_set = 4
-options_training_set = 2
+size_input_training_set = 2
+size_output_training_set = 1
 
 # Create training data
-training_data = sfix.Matrix(length_training_set,options_training_set)
-training_labels = sfix.Array(length_training_set)
+training_data = sfix.Matrix(length_training_set,size_input_training_set)
+training_labels = sfix.Matrix(length_training_set, size_output_training_set)
 
 # 0,0 -> 0
 training_data[0][0] = 0
 training_data[0][1] = 0
-training_labels[0] = 0
+training_labels[0][0] = 0
 # 0,1 -> 1
 training_data[1][0] = 0
 training_data[1][1] = 1
-training_labels[1] = 1
+training_labels[1][0] = 1
 # 1,0 -> 1
 training_data[2][0] = 1
 training_data[2][1] = 0
-training_labels[2] = 1
+training_labels[2][0] = 1
 # 1,1 -> 0
 training_data[3][0] = 1
 training_data[3][1] = 1
-training_labels[3] = 0
+training_labels[3][0] = 0
 
-# print_ln("height training %s", len(training_data))
-# print_ln("width training %s", len(training_data[0]))
-#
 # input_iteration = 3
 # @for_range(9)
 # def _(i):
 #     print_ln("input iteration: %s", input_iteration)
 #     print_ln("z[%s]: %s", i, training_data[input_iteration][i].reveal())
+activ_val = sfix.Matrix(tot_num_layers, max_dim_largest_layer)
+adjustments = sfix.MultiArray([tot_num_hidden_layers, max_dim_largest_layer, max_dim_largest_layer])
+
+# train()
+# Initiate error array
+# TODO: make CustVector out of this
+error = sfix.Array(100)
+
+# no of epochs
+@for_range(1)
+def _(k):
+    print_ln("+++++++++++++++++epoch no (%s)+++++++++++++++++++++++++", k)
+    @for_range(length_training_set)
+    def _(i):
+        print_ln("------------next dataset (%s)------------------", i)
+
+        # Forward pass of training set
+        __forward_propagate(training_data, i, activ_val)
+
+        print_ln("++++++++++++++++++++++++++++++++")
+        @for_range(tot_num_layers)
+        def _(j):
+            print_ln("act_val[%s]: %s, %s, %s, %s, %s, %s", j, activ_val[j][0].reveal(), activ_val[j][1].reveal(), activ_val[j][2].reveal(), activ_val[j][3].reveal(), activ_val[j][4].reveal(), activ_val[j][8].reveal())
+
+        print_ln("layer dim xxx: %s", layer_dimensions[tot_num_hidden_layers][1])
+
+        out = sfix.Array(size_output_training_set)
+        targ = sfix.Array(size_output_training_set)
+        @for_range(size_output_training_set)
+        def _(m):
+            out[m] = activ_val[tot_num_layers-1][m]
+            targ[m] = training_labels[i][m]
+
+        print_ln("act_val tt %s", activ_val[2][0].reveal())
+        print_ln("outtt %s", out[0].reveal())
+        loss = sum_squared_error(out, targ)
+        print_ln("loss %s", loss.reveal())
+        # must append here, so not only i but i+k
+        error[i+k] = loss
+
+        # Back propagation
+        # __back_propagate(activ_val, targ)
 
 
-@for_range(length_training_set)
-def _(i):
-    __forward_propagate(training_data, i)
+    @for_range(7)
+    def _(i):
+        print_ln("Error_list[%s] %s", i, error[i].reveal())
+
 
 
 #################################
@@ -347,6 +499,23 @@ def _(i):
 # def _(i):
 #     print_ln("%s", y[0][i].reveal())
 ###################################
+
+
+# print_ln("w_1[%s] %s ", 1, weights[0][0][1].reveal())
+# print_ln("w_1[%s] %s ", 2, weights[1][0][0].reveal())
+# print_ln("++++++++++++++++")
+# @for_range(9)
+# def _(i):
+#     print_ln("w_1[%s] %s ", i, weights[0][i][0].reveal())
+# @for_range(9)
+# def _(i):
+#     print_ln("w_2[%s]: %s", i, weights[1][i][0].reveal())
+#
+# @for_range(9)
+# def _(i):
+#     print_ln("b[%s]: %s", i, biases[1][i].reveal())
+# print_ln("++++++++++++++++")
+########################
 
 # def create_rand_sfloat
 
@@ -398,7 +567,31 @@ print_ln("+++++++")
 # def _(i):
 #     print_ln("%s", a[1][1][i].reveal())
 
+###########################
+# Test add_layer()
+# weights, b, adjustments = add_layer()
+#
+# print_ln("===================")
+# @for_range(9)
+# def _(i):
+#     print_ln("w[%s] %s ", i, weights[0][i].reveal())
+# print_ln("")
+# @for_range(9)
+# def _(i):
+#     print_ln("w[%s]: %s", i, weights[1][i].reveal())
+#
+# print(b)
+# @for_range(9)
+# def _(i):
+#     print_ln("b[%s]: %s", i, b[0][i].reveal())
+#
+# @for_range(9)
+# def _(k):
+#     print_ln("a[%s]: %s", k, adjustments[0][0][k].reveal())
+#
+# print_ln("===================")
 
+###############################
 
 
 # ###############################
