@@ -8,6 +8,10 @@ All rights reserved
 #include "Input_Output_DataSet.h"
 #include "Exceptions/Exceptions.h"
 
+// #include <chrono>
+// #include <thread>
+#include <unistd.h>
+
 #include <string>
 #include "math.h"
 
@@ -17,7 +21,11 @@ void Input_Output_DataSet::open_channel(unsigned int channel)
 
   string filename;
   // input_1.txt and input_2.txt can be used for testing
-  if (channel <= 10) {
+  if (channel == 0) {
+    filename = "input_1.txt";
+    inpf->open(filename);
+    cout << "here" << endl;
+  } else if (channel > 0 && channel <= 10) {
     filename = "input_1.txt";
     inpf->open(filename);
   } else if (channel > 10 && channel <= 20){
@@ -41,10 +49,12 @@ void Input_Output_DataSet::open_channel(unsigned int channel)
     if (inpf->fail()) {
       cout << "Could not find file!" << endl;
     } else {
+      cout << "here 2" << endl;
       cout << "Found file " << filename << endl;
     }
   } else {
-    if (outf->fail()) {
+	cout << "here 3" << endl;  
+  if (outf->fail()) {
       cout << "Could not find file!" << endl;
     } else {
       cout << "Found file " << filename << endl;
@@ -59,26 +69,98 @@ void Input_Output_DataSet::close_channel(unsigned int channel)
   outf->close();
 }
 
-
 gfp Input_Output_DataSet::private_input_gfp(unsigned int channel)
 {
+  cout << "here 4" << endl;
+  cout << "Channel number is " << channel << endl;  
+  gfp y;
+  if (channel == 0) {
+    int i;
+    i = 4;  
+    cout << "Sleeps for 540s now.." << endl;
+    sleep(540);
+    // this_thread::sleep_for(chrono::milliseconds(12000));  
+    cout << "Continue.." << endl;
+    y.assign(i);
+  } else {  
+
   // cout << "Input channel " << channel << " : " << endl;
   int NULL_for_passing_to_mpc = -123456789;
   string str;
   float x;
+
+  // for sints
+  // int var = -1;
+  // if (inpf->good()) {
+  //   (*inpf) >> x;
+  //   if (!inpf->eof()) {
+  //     x = round(x);
+  //     var = static_cast<int>(x);
+  //   } else {
+  //     var = NULL_for_passing_to_mpc;
+  //   }
+  // }
+
+  int vlen = 15;
+
   int var = -1;
-  if (inpf->good()) {
-    (*inpf) >> x;
-    if (!inpf->eof()) {
-      x = round(x);
-      var = static_cast<int>(x);
-    } else {
-      var = NULL_for_passing_to_mpc;
-    }
+ // gfp y;
+  // cout << "iter_: " << iter_ << endl;
+
+  // cout << "float: " << float_v << endl;
+  if(iter_ == 0) {
+      if (inpf->good()) {
+        (*inpf) >> x;
+        if (!inpf->eof()) {
+          if (x < 0) {
+              float_s = 1;
+          } else {
+              float_s = 0;
+          }
+
+          if (x == 0) {
+            float_v = 0;
+            float_p = 0;
+            float_z = 1;
+          } else{
+            float_p = static_cast<int>(floor(log2(fabs(x)))) - vlen + 1;
+            float_v = static_cast<int>(round(fabs(x) * pow(2,-float_p)));
+            float_z = 0;
+          }
+          // x = round(x);
+          // var = static_cast<int>(x);
+          float_array[0] = float_v;
+          float_array[1] = float_p;
+          float_array[2] = float_s;
+          float_array[3] = float_z;
+          y.assign(float_array[iter_]);
+          iter_++;
+        } else {
+          var = NULL_for_passing_to_mpc;
+          y.assign(var);
+        }
+      }
+  } else {
+      y.assign(float_array[iter_]);
+      iter_++;
+      if(iter_ == 4) {
+        iter_ = 0;
+      }
   }
 
-  gfp y;
-  y.assign(var);
+  // if(iter_ == 0) {
+  //     cout << "====================" << endl;
+  //     cout << "float_v: " << float_v << endl;
+  //     cout << "float_p: " << float_p << endl;
+  //     cout << "float_z: " << float_z << endl;
+  //     cout << "float_s: " << float_s << endl;
+  //     // cout << "x: " << x << endl;
+  //     cout << "====================" << endl;
+  // }
+  // gfp y;
+  // y.assign(var);
+
+  }
   return y;
 }
 
@@ -170,3 +252,4 @@ void Input_Output_DataSet::crash(unsigned int PC, unsigned int thread_num)
   printf("Crashing in thread %d at PC value %d\n", thread_num, PC);
   throw crash_requested();
 }
+
