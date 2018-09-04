@@ -108,7 +108,7 @@ def __sigmoid(x):
     return sfix(1) / (sfix(1) + mpc_math.exp2_fx(-x * mpc_math.log2_fx(sfix(EULER))))
 
 def __sigmoid_derivative(x):
-    return x * (1 - x)
+    return sfix(sfloat(x) * (sfloat(1) - sfloat(x)))
 
 def dot_prod(x_array, y_matrix, layer):
     output = sfix.Array(max_dim_largest_layer)
@@ -137,13 +137,13 @@ def dot_prod(x_array, y_matrix, layer):
     # Compute dot product
     @for_range(layer_dimensions[layer][1])
     def _(i):
-        sum_[0] = sfix(0.0)
+        sum_[0] = sfloat(0.0)
 
         @for_range(layer_dimensions[layer][0])
         def _(j):
-            product = x_array[j] * y_matrix[j][i]
+            product = sfloat(x_array[j]) * sfloat(y_matrix[j][i])
             sum_[0] = sum_[0] + product
-        output[i] = sum_[0]
+        output[i] = sfix(sum_[0])
 
     # SEE ABOVE[*]. Still here for testing. TODO: to be removed at one point
     @for_range(layer_dimensions[layer][1])
@@ -156,15 +156,15 @@ def dot_product_MxA(matrix, array, output, layer):
     def _(i):
         @for_range(layer_dimensions[layer][1])
         def _(j):
-            product = matrix[i][j] * array[j]
-            output[i] = output[i] + product
+            product = sfloat(matrix[i][j]) * sfloat(array[j])
+            output[i] = output[i] + sfix(product)
 
 def dot_prodAxA_T(x_matrix, y_matrix, output_matrix, layer):
     @for_range(layer_dimensions[layer][1])
     def _(i):
         @for_range(layer_dimensions[layer][0])
         def _(j):
-            output_matrix[i][j] = x_matrix[layer][i] * y_matrix[layer][j]
+            output_matrix[i][j] = sfix(sfloat(x_matrix[layer][i]) * sfloat(y_matrix[layer][j]))
 
 
 def __forward_propagate(data, input_iteration, activation_values):
@@ -178,9 +178,11 @@ def __forward_propagate(data, input_iteration, activation_values):
     # For debugging:
     # @for_range(9)
     # def _(i):
-    #     print_ln("input iteration: %s", input_iteration)
-    #     print_ln("d[%s]: %s", i, data[input_iteration][i].reveal())
+    #     print_ln("data[%s]: %s", i, data[input_iteration][i].reveal())
 
+    # print_ln("input iteration: %s", input_iteration)
+
+    # print_ln("len(data[0]): %s ", len(data[0]))
     @for_range(len(data[0]))
     def _(i):
         data_temp[i] = data[input_iteration][i]
@@ -205,8 +207,19 @@ def __forward_propagate(data, input_iteration, activation_values):
         # print_ln("layer dim %s", layer_dimensions[layer-1][1])
         # print_ln("Layer number %s", layer)
 
+        # print_ln("data_temp before dot")
+        # @for_range(12)
+        # def _(i):
+        #     print_ln("d_t bef dot %s", data_temp[i].reveal())
+
         # Dot product
         dot_prod(data_temp, weights[layer-1], layer-1)
+
+        # print_ln("data_temp after dot")
+        # @for_range(12)
+        # def _(i):
+        #     print_ln("d_t after dot%s", data_temp[i].reveal())
+        #
 
         @for_range(layer_dimensions[layer-1][1])
         def _(i):
@@ -220,42 +233,43 @@ def __forward_propagate(data, input_iteration, activation_values):
         # After first hidden layer  (so before output) of first iteration of
         # data, so training_data[0][x] and layer = 2, data_temp[0] has
         # to be same as print statement in python code with
-        # print("data out after sigmoid)
+        # print("data out after sigmoid")
         # @for_range(9)
         # def _(i):
-        #     print_ln("d_t %s", data_temp[i].reveal())
-
+        #     print_ln("d_t sig %s", data_temp[i].reveal())
+#########################
         @for_range(layer_dimensions[layer-1][1])
         def _(i):
             activation_values[layer][i] = data_temp[i]
 
 # Sum squared error
 def sum_squared_error(outputs, target_vector):
-    @for_range(len(outputs))
-    def _(i):
-        print_ln("outputs[%s]: %s", i, outputs[i].reveal())
-
-    @for_range(len(target_vector))
-    def _(i):
-        print_ln("target_vector[%s]: %s", i, target_vector[i].reveal())
-
-    print_ln("len target_vector %s", len(target_vector))
+    # For debugging:
+    # @for_range(len(outputs))
+    # def _(i):
+    #     print_ln("outputs[%s]: %s", i, outputs[i].reveal())
+    #
+    # @for_range(len(target_vector))
+    # def _(i):
+    #     print_ln("target_vector[%s]: %s", i, target_vector[i].reveal())
+    #
+    # print_ln("len target_vector %s", len(target_vector))
 
     # target_vector_err = sfloat.Array(len(target_vector))
     sum_err = sfloat.Array(1)
     sum_err[0] = 0.0
     @for_range(len(target_vector))
     def _(i):
-        print_ln("print outp again %s", outputs[i].reveal())
-        print_ln("print targ again %s", target_vector[i].reveal())
+        # print_ln("print outp again %s", outputs[i].reveal())
+        # print_ln("print targ again %s", target_vector[i].reveal())
         targets_err = sfloat(outputs[i]) - sfloat(target_vector[i])
-        print_ln("targ_err: %s", targets_err.reveal())
+        # print_ln("targ_err: %s", targets_err.reveal())
         # might need sfloats here
         sum_err[0] = sum_err[0] + (targets_err ** 2)
 
-    print_ln("sum_err: %s", sum_err[0].reveal())
+    # print_ln("sum_err: %s", sum_err[0].reveal())
     mean_err = sum_err[0] / sfloat(len(target_vector))
-    print_ln("mean_err: %s", mean_err.reveal())
+    # print_ln("mean_err: %s", mean_err.reveal())
     # TODO: check if this can be float..
     return sfix(sfloat(0.5) * mean_err)
 
@@ -267,7 +281,7 @@ def sum_squared_error(outputs, target_vector):
 def multiply(x_array, y_array, output, layer):
     @for_range(layer_dimensions[layer][0])
     def _(i):
-        output[i] = x_array[i] * y_array[i]
+        output[i] = sfix(sfloat(x_array[i]) * sfloat(y_array[i]))
 
 
 
@@ -308,10 +322,9 @@ def __back_propagate(activ_val_matrix, target_vector):
         deltas[tot_num_hidden_layers-1][i] = activ_val_matrix[tot_num_layers-1][i] - target_vector[i]
 
     # For debugging:
-    @for_range(9)
-    # @for_range(layer_dimensions[tot_num_hidden_layers-1][1])
-    def _(i):
-        print_ln("deltas 1[%s]: %s", i, deltas[tot_num_hidden_layers-1][i].reveal())
+    # @for_range(9)
+    # def _(i):
+    #     print_ln("deltas 1[%s]: %s", i, deltas[tot_num_hidden_layers-1][i].reveal())
 
     layer = MemValue(tot_num_hidden_layers - 1)
 
@@ -421,11 +434,12 @@ def __back_propagate(activ_val_matrix, target_vector):
         # Dot product arrayxarray.t (transposed)
         dot_prodAxA_T(deltas, activ_val_matrix, dot_product_matrix, layer)
 
-        @for_range(9)
-        def _(i):
-            @for_range(9)
-            def _(j):
-                print_ln("dot_prod_m[%s][%s]: %s", i, j, dot_product_matrix[i][j].reveal())
+        # For debugging:
+        # @for_range(9)
+        # def _(i):
+        #     @for_range(9)
+        #     def _(j):
+        #         print_ln("dot_prod_m[%s][%s]: %s", i, j, dot_product_matrix[i][j].reveal())
 
         # Adjustments does not take last layer, therefore, has same layout as
         # weights 3dArray. Dot_product matrix has to be transposed.
@@ -435,45 +449,88 @@ def __back_propagate(activ_val_matrix, target_vector):
             def _(j):
                 adjustments[layer][i][j] = adjustments[layer][i][j] + dot_product_matrix[j][i]
 
-    print_ln("+++++++++++adjustments++++++++++++++")
-    @for_range(2)
-    def _(i):
-        @for_range(9)
+    # print_ln("+++++++++++adjustments++++++++++++++")
+    # @for_range(2)
+    # def _(i):
+    #     @for_range(9)
+    #     def _(j):
+    #         @for_range(9)
+    #         def _(k):
+    #             print_ln("adjustments[%s][%s][%s]: %s", i, j, k, adjustments[i][j][k].reveal())
+
+
+def __gradient_descent(batch_size, learning_rate, epoch):
+    print_ln("here 1")
+
+
+    print_ln("batch size: %s ", batch_size)
+
+
+    partial_d = sfix.Matrix(max_dim_largest_layer, max_dim_largest_layer)
+    partial_d2 = sfloat.Array(max_dim_largest_layer)
+
+    @for_range(tot_num_hidden_layers)
+    def _(layer):
+        # print_ln("here 2")
+        # print_ln("layer dim[0]: %s ", layer_dimensions[layer][0])
+        @for_range(layer_dimensions[layer][0])
+        def _(i):
+            # print_ln("layer dim[1]: %s ", layer_dimensions[layer][1])
+            # print_ln("here6")
+            @for_range(layer_dimensions[layer][1])
+            def _(j):
+                # print_ln("here 3")
+                # print_ln("j: %s", j)
+                # print_ln("a[%s][%s]: %s", i, j, sfloat(adjustments[layer][i][j]).reveal())
+                value = sfloat(0)
+                value = sfloat(adjustments[layer][i][j])
+
+                # if_then(j == 0)
+                # print_ln("adjustments[%s][%s]: %s", i, j, sfloat(adjustments[layer][i][j]).reveal())
+                # print_ln("batch size in: %s", batch_size)
+                # print_ln("1/batch: %s", sfloat(1/batch_size).reveal())
+                # print_ln("1/batch sfloat: %s", (sfloat(1)/sfloat(batch_size)).reveal())
+                # end_if()
+
+                # float matrix broken. Hence, convert back to sfix until fix is published
+                # partial_d[i][j] = sfix((sfloat(1/batch_size)) * sfloat(adjustments[layer][i][j]))
+                partial_d[i][j] = sfix((sfloat(1)/sfloat(batch_size)) * sfloat(adjustments[layer][i][j]))
+
+                if_then(j == 0)
+                print_ln("partial d[%s][%s]: %s", i, j, partial_d[i][j].reveal())
+                end_if()
+                if_then(j == 0)
+                print_ln("part + learn rate[%s][%s]: %s", i, j, (sfloat(learning_rate) * -sfloat(partial_d[i][j])).reveal())
+                end_if()
+                weights[layer][i][j] = sfix(sfloat(weights[layer][i][j]) + (sfloat(learning_rate) * -sfloat(partial_d[i][j])))
+                if_then(j == 0)
+                print_ln("weights layer value[%s][%s][%s]: %s", layer, i, j, weights[layer][i][j].reveal())
+                end_if()
+
+                # print_ln("here 4")
+
+                partial_d2[j] = (sfloat(1)/sfloat(batch_size)) * sfloat(adjustments[layer][layer_dimensions[layer][0]-1][j])
+                biases[layer][j] = sfix(sfloat(biases[layer][j]) + (sfloat(learning_rate*0.001) * -partial_d2[j]))
+                # print_ln("here 5")
+
+        # if_then(epoch == 61)
+        print_ln("+++++++++++weights++++++++++++++")
+        @for_range(2)
+        def _(i):
+            @for_range(9)
+            def _(j):
+                @for_range(9)
+                def _(k):
+                    print_ln("weights[%s][%s][%s]: %s", i, j, k, weights[i][j][k].reveal())
+
+        print_ln("+++++++++++biases++++++++++++++")
+        @for_range(2)
         def _(j):
             @for_range(9)
             def _(k):
-                print_ln("adjustments[%s][%s][%s]: %s", i, j, k, adjustments[i][j][k].reveal())
+                print_ln("biases[%s][%s]: %s", j, k, biases[j][k].reveal())
+        # end_if()
 
-
-def __gradient_descent(batch_size, learning_rate):
-    partial_d = sfix.Matrix(max_dim_largest_layer, max_dim_largest_layer)
-    @for_range(tot_num_hidden_layers)
-    def _(layer):
-        # TODO: adjust range?
-        @for_range(max_dim_largest_layer)
-        def _(i):
-            @for_range(max_dim_largest_layer)
-            def _(j):
-                # maybe sfloat necessary here
-                partial_d = (1/batch_size) * adjustments[layer][i][j]
-                weights[layer][i][j] = weights[layer][i][j] + (learning_rate * -partial_d)
-
-
-                partial_d2 = (1/batch_size) * adjustments[layer][i][j]
-                biases[layer][i][j] = biases[layer][i][j] + (learning_rate*sfix(0.001) * -partial_d2)
-
-
-        # weights[layer]
-
-
-# test1 = sfix.Array(1)
-# test2 = sfix.Array(1)
-#
-# test1[0] = 0.603411
-# test2[0] = 1
-#
-# testloss = sum_squared_error(test1, test2)
-# print_ln("testloss %s", testloss)
 ########################
 # Number of layers and dimensions of largest layer have to be predefined so
 # arithmetic circuit can be created accortingly
@@ -547,11 +604,16 @@ adjustments = sfix.MultiArray([tot_num_hidden_layers, max_dim_largest_layer, max
 # train()
 # Initiate error array
 # TODO: make CustVector out of this
-error = sfix.Array(100)
+error = sfix.Array(500)
+length_error = MemValue(0)
+# TODO: in original code, this iterates from 0 to 3. That makes batch_size in
+# gradient_decent 3, not 4. -> check if thisis correct or bug in original code
+i_counter = MemValue(0)
 
 # no of epochs
-@for_range(1)
+@for_range(2)
 def _(k):
+    i_counter.write(0)
     print_ln("+++++++++++++++++epoch no (%s)+++++++++++++++++++++++++", k)
     @for_range(length_training_set)
     def _(i):
@@ -569,6 +631,7 @@ def _(k):
 
         out = sfix.Array(size_output_training_set)
         targ = sfix.Array(size_output_training_set)
+
         @for_range(size_output_training_set)
         def _(m):
             out[m] = activ_val[tot_num_layers-1][m]
@@ -579,16 +642,29 @@ def _(k):
         loss = sum_squared_error(out, targ)
         print_ln("loss %s", loss.reveal())
         # must append here, so not only i but i+k
-        error[i+k] = loss
+        error[length_error] = loss
+        length_error.write(length_error + 1)
 
         # Back propagation
         __back_propagate(activ_val, targ)
         print_ln("++++++++++++++++++++++++++++++++")
+        i_counter.write(i_counter + 1)
 
+    print_ln("length_error: %s", length_error)
+    learning_rate = 1
 
-    @for_range(7)
+    # count = cint(0)
+    # count = i_counter
+    #
+    # print_ln("i_counter: %s", i_counter)
+    # print_ln("count: %s", count)
+    # i_counter-1 for now as implemented in original code. To check
+    __gradient_descent(length_training_set-1, learning_rate, k)
+
+    @for_range(26)
     def _(i):
         print_ln("Error_list[%s] %s", i, error[i].reveal())
+
 
 
 
