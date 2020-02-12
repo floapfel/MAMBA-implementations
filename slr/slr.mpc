@@ -248,7 +248,6 @@ def get_random_index(data_length):
     end_if()
     end_if()
 
-    #print_ln("index: %s", index.reveal())
     return index
 
 def split_up(x_vector, y_vector, split):
@@ -309,8 +308,6 @@ def split_up(x_vector, y_vector, split):
         # the element at this place has not been assigned to the train set, yet.
         @do_while
         def _():
-            # print_ln("index: %s", index.reveal())
-            #print_ln("index 11 %s", index.reveal())
             # if: 1st if-block
             if_then((index < data_length).reveal())
             # TODO: check for possibility to not have to reveal index here
@@ -331,7 +328,6 @@ def split_up(x_vector, y_vector, split):
 
             # elseif: 2nd if-block
             else_then()
-            #print_ln("=======================================11111111111111111")
             # index.write(sint.get_random_int(8))
             index.write(get_random_index(data_length))
             # index.write(sint.get_random_int(nbit))
@@ -344,14 +340,12 @@ def split_up(x_vector, y_vector, split):
             else_then()
             # index.write(sint.get_random_int(8))
             # index.write(sint.get_random_int(nbit))
-            #print_ln("=======================================222222222222222222")
             index.write(get_random_index(data_length))
             count.write(count + 1)
 
             # end: 1st if-block
             end_if()
             return condition > 0
-
 
         #print_ln("count: %s", count)
         #print_ln("index: %s",index.reveal())
@@ -1238,7 +1232,7 @@ def main():
     print_ln("RMSE: %s", rmse.reveal())
     print_ln("==========================")
 
-# Introduce waiting time (implementaed in Input_Output_DataSet.cpp) so preprocessing
+# Introduce waiting time (implemented in Input_Output_DataSet.cpp) so preprocessing
 # can finish before program starts to compute online phase
 open_channel(0)
 a = sint.get_private_input_from(0,0)
@@ -1260,4 +1254,3 @@ stop_timer(1)
 #print_ln("++++++++++++++++++")
 #stop_timer(1)
 #print_ln("++++++++++++++++++")
-

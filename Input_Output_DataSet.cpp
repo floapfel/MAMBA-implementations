@@ -53,7 +53,7 @@ void Input_Output_DataSet::open_channel(unsigned int channel)
       cout << "Found file " << filename << endl;
     }
   } else {
-	cout << "here 3" << endl;  
+	cout << "here 3" << endl;
   if (outf->fail()) {
       cout << "Could not find file!" << endl;
     } else {
@@ -72,17 +72,17 @@ void Input_Output_DataSet::close_channel(unsigned int channel)
 gfp Input_Output_DataSet::private_input_gfp(unsigned int channel)
 {
   cout << "here 4" << endl;
-  cout << "Channel number is " << channel << endl;  
+  cout << "Channel number is " << channel << endl;
   gfp y;
   if (channel == 0) {
     int i;
-    i = 4;  
+    i = 4;
     cout << "Sleeps for 540s now.." << endl;
     sleep(540);
-    // this_thread::sleep_for(chrono::milliseconds(12000));  
+    // this_thread::sleep_for(chrono::milliseconds(12000));
     cout << "Continue.." << endl;
     y.assign(i);
-  } else {  
+  } else {
 
   // cout << "Input channel " << channel << " : " << endl;
   int NULL_for_passing_to_mpc = -123456789;
@@ -104,7 +104,7 @@ gfp Input_Output_DataSet::private_input_gfp(unsigned int channel)
   int vlen = 15;
 
   int var = -1;
- // gfp y;
+  gfp y;
   // cout << "iter_: " << iter_ << endl;
 
   // cout << "float: " << float_v << endl;
@@ -148,19 +148,6 @@ gfp Input_Output_DataSet::private_input_gfp(unsigned int channel)
       }
   }
 
-  // if(iter_ == 0) {
-  //     cout << "====================" << endl;
-  //     cout << "float_v: " << float_v << endl;
-  //     cout << "float_p: " << float_p << endl;
-  //     cout << "float_z: " << float_z << endl;
-  //     cout << "float_s: " << float_s << endl;
-  //     // cout << "x: " << x << endl;
-  //     cout << "====================" << endl;
-  // }
-  // gfp y;
-  // y.assign(var);
-
-  }
   return y;
 }
 
@@ -252,4 +239,3 @@ void Input_Output_DataSet::crash(unsigned int PC, unsigned int thread_num)
   printf("Crashing in thread %d at PC value %d\n", thread_num, PC);
   throw crash_requested();
 }
-

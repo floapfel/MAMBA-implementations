@@ -38,3 +38,9 @@
 **/slr/slr-0.bc
 **/slr/slr_input.mpc
 **/slr/slr2.mpc
+**/knn/**
+**/test_Full_Threshold/**
+**/nn/nn-0.bc
+**/nn/nn.sch
+**/nn/nn
+**/play/**
